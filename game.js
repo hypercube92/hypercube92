@@ -12,8 +12,8 @@ class LumonGame {
         this.automationUpgrades = [
             {
                 id: 'intern',
-                name: 'Stagiaire MDR',
-                description: 'Un nouveau stagiaire pour trier les nombres',
+                name: 'Nouvel Innie',
+                description: 'Un employé fraîchement severed pour le raffinement',
                 baseCost: 10,
                 baseProduction: 0.1,
                 count: 0,
@@ -21,17 +21,17 @@ class LumonGame {
             },
             {
                 id: 'colleague',
-                name: 'Collègue de Bureau',
-                description: 'Un collègue expérimenté en raffinement',
+                name: 'Équipe MDR',
+                description: 'Collègues dévoués au travail mystérieux',
                 baseCost: 100,
                 baseProduction: 1,
                 count: 0,
                 costMultiplier: 1.15
             },
             {
-                id: 'teamLead',
-                name: 'Chef d\'Équipe',
-                description: 'Supervise et optimise le travail',
+                id: 'milchick',
+                name: 'Mr. Milchick',
+                description: 'Le superviseur motivant de l\'étage',
                 baseCost: 1100,
                 baseProduction: 8,
                 count: 0,
@@ -40,7 +40,7 @@ class LumonGame {
             {
                 id: 'odDept',
                 name: 'Département O&D',
-                description: 'Optics & Design pour améliorer l\'efficacité',
+                description: 'Optics & Design - Créateurs d\'art mystérieux',
                 baseCost: 12000,
                 baseProduction: 47,
                 count: 0,
@@ -49,16 +49,25 @@ class LumonGame {
             {
                 id: 'waffle',
                 name: 'Waffle Party',
-                description: 'La motivation ultime pour vos équipes',
+                description: 'La récompense ultime pour 100% de quota',
                 baseCost: 130000,
                 baseProduction: 260,
                 count: 0,
                 costMultiplier: 1.15
             },
             {
+                id: 'breakRoom',
+                name: 'Protocole Break Room',
+                description: 'Correction de comportement pour productivité maximale',
+                baseCost: 800000,
+                baseProduction: 900,
+                count: 0,
+                costMultiplier: 1.15
+            },
+            {
                 id: 'goatRoom',
                 name: 'Salle des Chèvres',
-                description: 'Un mystère qui booste la productivité',
+                description: 'Les chèvres mystérieuses du département',
                 baseCost: 1400000,
                 baseProduction: 1400,
                 count: 0,
@@ -67,18 +76,27 @@ class LumonGame {
             {
                 id: 'perpetuity',
                 name: 'Aile de la Perpétuité',
-                description: 'Le département le plus mystérieux de Lumon',
+                description: 'Où Burt travaille sur des mystères anciens',
                 baseCost: 20000000,
                 baseProduction: 7800,
                 count: 0,
                 costMultiplier: 1.15
             },
             {
+                id: 'cobel',
+                name: 'Ms. Cobel',
+                description: 'La manager déterminée de Lumon',
+                baseCost: 100000000,
+                baseProduction: 25000,
+                count: 0,
+                costMultiplier: 1.15
+            },
+            {
                 id: 'boardRoom',
                 name: 'Conseil d\'Administration',
-                description: 'Les décideurs ultimes de Lumon',
-                baseCost: 330000000,
-                baseProduction: 44000,
+                description: 'Le pouvoir suprême de Lumon Industries',
+                baseCost: 500000000,
+                baseProduction: 100000,
                 count: 0,
                 costMultiplier: 1.15
             }
@@ -87,24 +105,24 @@ class LumonGame {
         this.efficiencyUpgrades = [
             {
                 id: 'ergonomics',
-                name: 'Ergonomie Améliorée',
-                description: '+1 nombre par clic',
+                name: 'Poste de Travail Optimisé',
+                description: '+1 nombre par clic - Confort approuvé par Lumon',
                 cost: 50,
                 purchased: false,
                 effect: () => this.clickPower += 1
             },
             {
-                id: 'keyboard',
-                name: 'Clavier Mécanique',
-                description: 'Double la vitesse de clic',
+                id: 'defiantJazz',
+                name: 'Defiant Jazz',
+                description: 'Double les clics - La musique qui motive',
                 cost: 500,
                 purchased: false,
                 effect: () => this.clickPower *= 2
             },
             {
-                id: 'breakRoom',
-                name: 'Accès Break Room',
-                description: '+5 nombres par clic',
+                id: 'musicCards',
+                name: 'Music Dance Experience',
+                description: '+5 nombres par clic - Récompense de quota',
                 cost: 2500,
                 purchased: false,
                 effect: () => this.clickPower += 5
@@ -112,54 +130,117 @@ class LumonGame {
             {
                 id: 'handbook',
                 name: 'Manuel de l\'Employé',
-                description: 'Double la production passive',
+                description: 'x2 production passive - "You are a whole person"',
                 cost: 10000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             },
             {
-                id: 'music',
-                name: 'Système de Musique',
-                description: '+10% production totale',
+                id: 'fingerTraps',
+                name: 'Finger Traps',
+                description: '+10% production - Thérapie approuvée',
                 cost: 50000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             },
             {
                 id: 'overtime',
-                name: 'Programme Overtime',
-                description: '+25% production totale',
+                name: 'Protocole Overtime',
+                description: '+25% production - Engagement maximum',
                 cost: 250000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             },
             {
                 id: 'kier',
-                name: 'Bénédiction de Kier',
-                description: 'Triple la production de clics',
+                name: 'Portrait de Kier',
+                description: 'x3 clics - "Kier nous observe et nous protège"',
                 cost: 1000000,
                 purchased: false,
                 effect: () => this.clickPower *= 3
             },
             {
+                id: 'lexington',
+                name: 'Lettre de Lexington',
+                description: 'x2 production totale - Connaissance interdite',
+                cost: 5000000,
+                purchased: false,
+                effect: () => this.calculateNPS()
+            },
+            {
                 id: 'enlightenment',
-                name: 'Illumination Totale',
-                description: 'Double TOUTE la production',
-                cost: 10000000,
+                name: 'Réveil Complet',
+                description: 'x2 production - Votre Innie et Outie ne font qu\'un',
+                cost: 20000000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             }
         ];
 
         this.milestones = [
-            { threshold: 100, message: "Vous avez atteint votre premier quota !" },
-            { threshold: 1000, message: "Promotion ! Vous montez d'un niveau." },
-            { threshold: 10000, message: "Excellente performance ! Une Waffle Party vous attend." },
-            { threshold: 100000, message: "Performance exceptionnelle ! Accès à la salle des chèvres débloqué." },
-            { threshold: 1000000, message: "Vous êtes désormais un employé exemplaire de Lumon !" }
+            { threshold: 100, message: "Premier quota atteint ! Mr. Milchick est fier de vous." },
+            { threshold: 1000, message: "Excellent travail ! Accès au Music Dance Experience débloqué." },
+            { threshold: 10000, message: "100% de quota ! Une Waffle Party a été organisée en votre honneur !" },
+            { threshold: 50000, message: "Performance remarquable ! Vous recevez des Finger Traps en récompense." },
+            { threshold: 100000, message: "Employé du mois ! Accès à la salle des chèvres débloqué." },
+            { threshold: 500000, message: "Ms. Cobel vous félicite personnellement. Continuez ainsi." },
+            { threshold: 1000000, message: "Vous avez découvert les secrets de l'Aile de la Perpétuité." },
+            { threshold: 5000000, message: "Le Conseil d'Administration reconnaît votre dévouement à Lumon." }
         ];
 
-        this.randomNumbers = [3, 7, 11, 17, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71];
+        // Number categories like in Severance
+        this.numberCategories = {
+            scary: {
+                numbers: [13, 66, 666, 99, 101, 187, 404, 911],
+                color: '#d9534f',
+                bonus: 2,
+                description: 'SCARY'
+            },
+            sad: {
+                numbers: [0, 7, 21, 42, 69, 273, 365],
+                color: '#5bc0de',
+                bonus: 1.5,
+                description: 'SAD'
+            },
+            angry: {
+                numbers: [8, 18, 88, 108, 188, 888],
+                color: '#f0ad4e',
+                bonus: 1.8,
+                description: 'ANGRY'
+            },
+            happy: {
+                numbers: [3, 7, 11, 17, 23, 29, 31, 37, 41, 43, 47, 53],
+                color: '#5cb85c',
+                bonus: 1.3,
+                description: 'HAPPY'
+            }
+        };
+
+        this.currentNumber = this.getRandomNumber();
+        this.currentCategory = null;
+
+        // Kier Eagan's Nine Core Principles
+        this.kierPrinciples = [
+            "Travail et Tempérance",
+            "Calme et Compassion",
+            "Alimentation et Fraternité",
+            "Humilité et Dévotion",
+            "Vigilance et Progrès",
+            "Retenue et Modestie",
+            "Courage et Discipline",
+            "Intégrité et Innovation",
+            "Persévérance et Unité"
+        ];
+
+        this.lumonQuotes = [
+            "We are mysterious and important.",
+            "I find the work rewarding.",
+            "The work is mysterious and important.",
+            "Kier Eagan loves you.",
+            "The refinement process is sacred.",
+            "Trust the process.",
+            "Your Outie chose this for you."
+        ];
 
         this.init();
     }
@@ -167,9 +248,16 @@ class LumonGame {
     init() {
         this.loadGame();
         this.setupEventListeners();
+        this.updateNumberDisplay();
         this.updateUI();
         this.startGameLoop();
         this.renderUpgrades();
+        this.showRandomQuote();
+    }
+
+    showRandomQuote() {
+        const quote = this.lumonQuotes[Math.floor(Math.random() * this.lumonQuotes.length)];
+        this.showNotification(quote);
     }
 
     setupEventListeners() {
@@ -201,8 +289,32 @@ class LumonGame {
         setInterval(() => this.saveGame(), 30000);
     }
 
+    getRandomNumber() {
+        // Get all numbers from all categories
+        const allNumbers = Object.values(this.numberCategories).flatMap(cat => cat.numbers);
+        return allNumbers[Math.floor(Math.random() * allNumbers.length)];
+    }
+
+    getNumberCategory(number) {
+        for (const [categoryName, category] of Object.entries(this.numberCategories)) {
+            if (category.numbers.includes(number)) {
+                return { name: categoryName, ...category };
+            }
+        }
+        return null;
+    }
+
     handleClick(event) {
-        const earnedNumbers = this.clickPower;
+        const category = this.currentCategory;
+        let earnedNumbers = this.clickPower;
+
+        // Apply category bonus
+        if (category) {
+            earnedNumbers *= category.bonus;
+            // Show category message
+            this.showCategoryBonus(category);
+        }
+
         this.numbers += earnedNumbers;
         this.totalNumbersRefined += earnedNumbers;
 
@@ -210,21 +322,40 @@ class LumonGame {
         this.updateUI();
 
         // Create floating number animation
-        this.createFloatingNumber(event.clientX, event.clientY, earnedNumbers);
+        this.createFloatingNumber(event.clientX, event.clientY, earnedNumbers, category);
 
-        // Random number on button
-        this.updateRandomNumber();
+        // Generate new random number
+        this.currentNumber = this.getRandomNumber();
+        this.currentCategory = this.getNumberCategory(this.currentNumber);
+        this.updateNumberDisplay();
 
         // Check milestones
         this.checkMilestones();
     }
 
-    createFloatingNumber(x, y, value) {
+    showCategoryBonus(category) {
+        const rewardEl = document.getElementById('rewardMessage');
+        rewardEl.textContent = `${category.description} : Bonus x${category.bonus} !`;
+        rewardEl.style.borderColor = category.color;
+        rewardEl.style.background = category.color + '33';
+        rewardEl.classList.remove('hidden');
+
+        setTimeout(() => {
+            rewardEl.classList.add('hidden');
+            rewardEl.style.borderColor = '';
+            rewardEl.style.background = '';
+        }, 2000);
+    }
+
+    createFloatingNumber(x, y, value, category) {
         const floatingNum = document.createElement('div');
         floatingNum.className = 'floating-number';
         floatingNum.textContent = '+' + this.formatNumber(value);
         floatingNum.style.left = x + 'px';
         floatingNum.style.top = y + 'px';
+        if (category) {
+            floatingNum.style.color = category.color;
+        }
         document.body.appendChild(floatingNum);
 
         setTimeout(() => {
@@ -232,9 +363,36 @@ class LumonGame {
         }, 1000);
     }
 
-    updateRandomNumber() {
-        const randomNum = this.randomNumbers[Math.floor(Math.random() * this.randomNumbers.length)];
-        document.querySelector('.number-value').textContent = randomNum;
+    updateNumberDisplay() {
+        const numberValueEl = document.querySelector('.number-value');
+        const numberDisplayEl = document.querySelector('.number-display');
+        const categoryIndicatorEl = document.getElementById('categoryIndicator');
+        const categoryNameEl = document.getElementById('categoryName');
+
+        numberValueEl.textContent = this.currentNumber;
+
+        // Apply category color and show indicator
+        if (this.currentCategory) {
+            numberValueEl.style.color = this.currentCategory.color;
+            numberDisplayEl.style.borderColor = this.currentCategory.color;
+            numberDisplayEl.style.boxShadow = `0 0 15px ${this.currentCategory.color}66`;
+
+            // Update category indicator
+            categoryNameEl.textContent = `${this.currentCategory.description} (x${this.currentCategory.bonus})`;
+            categoryIndicatorEl.style.borderColor = this.currentCategory.color;
+            categoryIndicatorEl.style.backgroundColor = this.currentCategory.color + '22';
+            categoryNameEl.style.color = this.currentCategory.color;
+        } else {
+            numberValueEl.style.color = '#6aba9a';
+            numberDisplayEl.style.borderColor = '#6aba9a';
+            numberDisplayEl.style.boxShadow = '';
+
+            // Hide category indicator
+            categoryNameEl.textContent = 'NEUTRAL';
+            categoryIndicatorEl.style.borderColor = '#4a9a7a';
+            categoryIndicatorEl.style.backgroundColor = '#1a3a2a';
+            categoryNameEl.style.color = '#8acaaa';
+        }
     }
 
     calculateNPS() {
@@ -249,11 +407,14 @@ class LumonGame {
         if (this.efficiencyUpgrades.find(u => u.id === 'handbook' && u.purchased)) {
             nps *= 2;
         }
-        if (this.efficiencyUpgrades.find(u => u.id === 'music' && u.purchased)) {
+        if (this.efficiencyUpgrades.find(u => u.id === 'fingerTraps' && u.purchased)) {
             nps *= 1.1;
         }
         if (this.efficiencyUpgrades.find(u => u.id === 'overtime' && u.purchased)) {
             nps *= 1.25;
+        }
+        if (this.efficiencyUpgrades.find(u => u.id === 'lexington' && u.purchased)) {
+            nps *= 2;
         }
         if (this.efficiencyUpgrades.find(u => u.id === 'enlightenment' && u.purchased)) {
             nps *= 2;
@@ -320,13 +481,15 @@ class LumonGame {
                 <div class="upgrade-details">
                     <div class="upgrade-count">Possédés: ${upgrade.count}</div>
                     <div class="upgrade-cost">${this.formatNumber(cost)}</div>
-                    <button class="upgrade-button" ${affordable ? '' : 'disabled'}>
+                    <button class="upgrade-button">
                         Acheter
                     </button>
                 </div>
             `;
 
-            upgradeDiv.querySelector('button').addEventListener('click', () => {
+            const button = upgradeDiv.querySelector('button');
+            button.disabled = !affordable;
+            button.addEventListener('click', () => {
                 this.buyAutomationUpgrade(upgrade.id);
             });
 
@@ -349,14 +512,16 @@ class LumonGame {
                 </div>
                 <div class="upgrade-details">
                     <div class="upgrade-cost">${upgrade.purchased ? 'ACHETÉ' : this.formatNumber(upgrade.cost)}</div>
-                    <button class="upgrade-button" ${affordable ? '' : 'disabled'}>
+                    <button class="upgrade-button">
                         ${upgrade.purchased ? 'Possédé' : 'Acheter'}
                     </button>
                 </div>
             `;
 
+            const button = upgradeDiv.querySelector('button');
+            button.disabled = !affordable;
             if (!upgrade.purchased) {
-                upgradeDiv.querySelector('button').addEventListener('click', () => {
+                button.addEventListener('click', () => {
                     this.buyEfficiencyUpgrade(upgrade.id);
                 });
             }

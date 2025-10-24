@@ -37,6 +37,9 @@
                 </div>
 
                 <div class="clicker-area">
+                    <div id="categoryIndicator" class="category-indicator">
+                        <span id="categoryName"></span>
+                    </div>
                     <button id="clickButton" class="click-button">
                         <div class="number-display">
                             <span class="number-value">47</span>
@@ -44,6 +47,15 @@
                         <p>Raffiner un Nombre</p>
                     </button>
                     <p id="clickValue" class="click-value">+1 par clic</p>
+                    <div class="category-legend">
+                        <p class="legend-title">Catégories de Raffinement:</p>
+                        <div class="legend-items">
+                            <span class="legend-item" style="color: #d9534f;">■ SCARY (x2)</span>
+                            <span class="legend-item" style="color: #f0ad4e;">■ ANGRY (x1.8)</span>
+                            <span class="legend-item" style="color: #5bc0de;">■ SAD (x1.5)</span>
+                            <span class="legend-item" style="color: #5cb85c;">■ HAPPY (x1.3)</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="rewards-area">
@@ -71,17 +83,40 @@
                     <div class="prestige-panel">
                         <h3>Severance Reset</h3>
                         <p>Réinitialisez votre progression pour obtenir des Jetons de Mérite permanents.</p>
+                        <p class="prestige-description">"Your Outie has chosen this path. Trust in Kier's wisdom."</p>
                         <p>Jetons actuels: <span id="meritTokens">0</span></p>
                         <p>Jetons après reset: <span id="potentialTokens">0</span></p>
+                        <p class="prestige-bonus">+10% production par jeton</p>
                         <button id="prestigeButton" class="prestige-button">Subir la Severance</button>
+                    </div>
+                    <div class="kier-principles">
+                        <h3>Les Neuf Principes de Kier Eagan</h3>
+                        <ol id="principlesList">
+                            <li>Travail et Tempérance</li>
+                            <li>Calme et Compassion</li>
+                            <li>Alimentation et Fraternité</li>
+                            <li>Humilité et Dévotion</li>
+                            <li>Vigilance et Progrès</li>
+                            <li>Retenue et Modestie</li>
+                            <li>Courage et Discipline</li>
+                            <li>Intégrité et Innovation</li>
+                            <li>Persévérance et Unité</li>
+                        </ol>
+                        <p class="kier-quote">"In waking, a man is his own master. In sleep, he is the pupil of Kier."</p>
                     </div>
                 </div>
             </div>
         </main>
 
         <footer>
-            <p class="lumon-motto">"We are mysterious and important."</p>
-            <button id="saveButton" class="save-button">Sauvegarder</button>
+            <div class="footer-content">
+                <div class="lumon-info">
+                    <p class="lumon-motto">"We are mysterious and important."</p>
+                    <p class="lumon-subtext">Lumon Industries © Fondée par Kier Eagan</p>
+                    <p class="department-info">Macrodata Refinement Division - Severed Floor</p>
+                </div>
+                <button id="saveButton" class="save-button">Sauvegarder</button>
+            </div>
         </footer>
     </div>
 

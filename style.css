@@ -114,6 +114,48 @@ main {
     position: relative;
 }
 
+.category-indicator {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a3a2a;
+    padding: 10px 20px;
+    border: 2px solid #4a9a7a;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    min-width: 150px;
+    text-align: center;
+}
+
+.category-legend {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.legend-title {
+    color: #8acaaa;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.legend-items {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
 .click-button {
     width: 250px;
     height: 250px;
@@ -332,6 +374,7 @@ main {
     border: 3px solid #4a5a7a;
     padding: 30px;
     text-align: center;
+    margin-bottom: 20px;
 }
 
 .prestige-panel h3 {
@@ -344,6 +387,56 @@ main {
     color: #9aaaba;
     margin: 10px 0;
     line-height: 1.6;
+}
+
+.prestige-description {
+    font-style: italic;
+    color: #8a9aaa !important;
+    font-size: 0.9em;
+}
+
+.prestige-bonus {
+    color: #6a9aaa !important;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* Kier Principles */
+.kier-principles {
+    background: #1a3a2a;
+    border: 3px solid #4a7a5a;
+    padding: 30px;
+}
+
+.kier-principles h3 {
+    color: #6aba9a;
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.kier-principles ol {
+    color: #8acaaa;
+    margin-left: 40px;
+    line-height: 2;
+    font-size: 1em;
+}
+
+.kier-principles ol li {
+    margin: 10px 0;
+    padding-left: 10px;
+}
+
+.kier-quote {
+    color: #6aba9a;
+    font-style: italic;
+    text-align: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid #2a5a4a;
+    font-size: 1.05em;
 }
 
 .prestige-button {
@@ -373,14 +466,36 @@ footer {
     background: #0a2a1a;
     padding: 20px 30px;
     border-top: 2px solid #2a6a5a;
-    text-align: center;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lumon-info {
+    text-align: left;
 }
 
 .lumon-motto {
     color: #6aba9a;
     font-style: italic;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     font-size: 1.1em;
+}
+
+.lumon-subtext {
+    color: #5a8a7a;
+    font-size: 0.85em;
+    margin-bottom: 5px;
+}
+
+.department-info {
+    color: #4a7a6a;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .save-button {
