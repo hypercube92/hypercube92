@@ -1,7 +1,9 @@
-// Lumon Industries - Macrodata Refinement Clicker Game
+// Lumon Industries - Macrodata Refinement Game
+// Complete Rewrite with Matter.js Physics Engine
 
 class LumonGame {
     constructor() {
+        // Core game state
         this.numbers = 0;
         this.clickPower = 1;
         this.numbersPerSecond = 0;
@@ -9,24 +11,62 @@ class LumonGame {
         this.meritTokens = 0;
         this.totalNumbersRefined = 0;
 
-        // New sorting system
-        this.numberQueue = [];
-        this.maxQueueSize = 8;
-        this.selectedNumber = null;
+        // Sorting mechanics
         this.combo = 0;
+        this.maxCombo = 0;
         this.totalSorted = 0;
         this.correctSorts = 0;
         this.sortTimes = [];
         this.categoryCount = { scary: 0, angry: 0, sad: 0, happy: 0 };
+
+        // Spawn system
         this.autoSortEnabled = false;
         this.lastSpawnTime = Date.now();
-        this.spawnInterval = 3000; // 3 seconds base
+        this.spawnInterval = 3000;
+        this.maxNumbers = 8;
 
+        // Selected number for sorting
+        this.selectedNumber = null;
+
+        // Number categories from Severance
+        this.numberCategories = {
+            scary: {
+                numbers: [13, 66, 666, 99, 101, 187, 404, 911],
+                color: '#d9534f',
+                bonus: 2.0,
+                icon: '😱',
+                description: 'SCARY'
+            },
+            angry: {
+                numbers: [8, 18, 88, 108, 188, 888],
+                color: '#f0ad4e',
+                bonus: 1.8,
+                icon: '😠',
+                description: 'ANGRY'
+            },
+            sad: {
+                numbers: [0, 7, 21, 42, 69, 273, 365],
+                color: '#5bc0de',
+                bonus: 1.5,
+                icon: '😢',
+                description: 'SAD'
+            },
+            happy: {
+                numbers: [3, 11, 17, 23, 29, 31, 37, 41, 43, 47, 53],
+                color: '#5cb85c',
+                bonus: 1.3,
+                icon: '😊',
+                description: 'HAPPY'
+            }
+        };
+
+        // Upgrades with icons
         this.automationUpgrades = [
             {
                 id: 'intern',
+                icon: '👤',
                 name: 'Nouvel Innie',
-                description: 'Génère des nombres + trie manuellement',
+                description: 'Un employé fraîchement severed',
                 baseCost: 10,
                 baseProduction: 0.1,
                 count: 0,
@@ -34,8 +74,9 @@ class LumonGame {
             },
             {
                 id: 'colleague',
+                icon: '👥',
                 name: 'Équipe MDR',
-                description: 'Augmente la vitesse de spawn',
+                description: 'Collègues dévoués au raffinement',
                 baseCost: 100,
                 baseProduction: 1,
                 count: 0,
@@ -43,8 +84,9 @@ class LumonGame {
             },
             {
                 id: 'milchick',
+                icon: '👔',
                 name: 'Mr. Milchick',
-                description: '🤖 Active le tri automatique ! (3+ upgrades)',
+                description: '🤖 Active l\'auto-tri (3+ upgrades)',
                 baseCost: 1100,
                 baseProduction: 8,
                 count: 0,
@@ -52,8 +94,9 @@ class LumonGame {
             },
             {
                 id: 'odDept',
+                icon: '🎨',
                 name: 'Département O&D',
-                description: 'Optics & Design - Créateurs d\'art mystérieux',
+                description: 'Optics & Design',
                 baseCost: 12000,
                 baseProduction: 47,
                 count: 0,
@@ -61,8 +104,9 @@ class LumonGame {
             },
             {
                 id: 'waffle',
+                icon: '🧇',
                 name: 'Waffle Party',
-                description: 'La récompense ultime pour 100% de quota',
+                description: 'La récompense ultime',
                 baseCost: 130000,
                 baseProduction: 260,
                 count: 0,
@@ -70,8 +114,9 @@ class LumonGame {
             },
             {
                 id: 'breakRoom',
-                name: 'Protocole Break Room',
-                description: 'Correction de comportement pour productivité maximale',
+                icon: '🚪',
+                name: 'Break Room',
+                description: 'Correction de comportement',
                 baseCost: 800000,
                 baseProduction: 900,
                 count: 0,
@@ -79,8 +124,9 @@ class LumonGame {
             },
             {
                 id: 'goatRoom',
+                icon: '🐐',
                 name: 'Salle des Chèvres',
-                description: 'Les chèvres mystérieuses du département',
+                description: 'Le mystère des chèvres',
                 baseCost: 1400000,
                 baseProduction: 1400,
                 count: 0,
@@ -88,8 +134,9 @@ class LumonGame {
             },
             {
                 id: 'perpetuity',
-                name: 'Aile de la Perpétuité',
-                description: 'Où Burt travaille sur des mystères anciens',
+                icon: '🏛️',
+                name: 'Aile Perpétuité',
+                description: 'Département mystérieux',
                 baseCost: 20000000,
                 baseProduction: 7800,
                 count: 0,
@@ -97,8 +144,9 @@ class LumonGame {
             },
             {
                 id: 'cobel',
+                icon: '👩‍💼',
                 name: 'Ms. Cobel',
-                description: 'La manager déterminée de Lumon',
+                description: 'Manager déterminée',
                 baseCost: 100000000,
                 baseProduction: 25000,
                 count: 0,
@@ -106,8 +154,9 @@ class LumonGame {
             },
             {
                 id: 'boardRoom',
-                name: 'Conseil d\'Administration',
-                description: 'Le pouvoir suprême de Lumon Industries',
+                icon: '👔',
+                name: 'Conseil Admin',
+                description: 'Le pouvoir suprême',
                 baseCost: 500000000,
                 baseProduction: 100000,
                 count: 0,
@@ -118,72 +167,81 @@ class LumonGame {
         this.efficiencyUpgrades = [
             {
                 id: 'ergonomics',
-                name: 'Poste de Travail Optimisé',
-                description: '+1 nombre par clic - Confort approuvé par Lumon',
+                icon: '💺',
+                name: 'Poste Optimisé',
+                description: '+1 par tri',
                 cost: 50,
                 purchased: false,
                 effect: () => this.clickPower += 1
             },
             {
                 id: 'defiantJazz',
+                icon: '🎵',
                 name: 'Defiant Jazz',
-                description: 'Double les clics - La musique qui motive',
+                description: 'x2 puissance tri',
                 cost: 500,
                 purchased: false,
                 effect: () => this.clickPower *= 2
             },
             {
                 id: 'musicCards',
-                name: 'Music Dance Experience',
-                description: '+5 nombres par clic - Récompense de quota',
+                icon: '💃',
+                name: 'Music Dance',
+                description: '+5 par tri',
                 cost: 2500,
                 purchased: false,
                 effect: () => this.clickPower += 5
             },
             {
                 id: 'handbook',
-                name: 'Manuel de l\'Employé',
-                description: 'x2 production passive - "You are a whole person"',
+                icon: '📖',
+                name: 'Manuel Employé',
+                description: 'x2 production passive',
                 cost: 10000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             },
             {
                 id: 'fingerTraps',
+                icon: '🤲',
                 name: 'Finger Traps',
-                description: '+10% production - Thérapie approuvée',
+                description: '+10% production',
                 cost: 50000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             },
             {
                 id: 'overtime',
-                name: 'Protocole Overtime',
-                description: '+25% production - Engagement maximum',
+                icon: '⏰',
+                name: 'Overtime',
+                description: '+25% production',
                 cost: 250000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             },
             {
                 id: 'kier',
-                name: 'Portrait de Kier',
-                description: 'x3 clics - "Kier nous observe et nous protège"',
+                icon: '🖼️',
+                name: 'Portrait Kier',
+                description: 'x3 puissance tri',
                 cost: 1000000,
                 purchased: false,
                 effect: () => this.clickPower *= 3
             },
             {
                 id: 'lexington',
-                name: 'Lettre de Lexington',
-                description: 'x2 production totale - Connaissance interdite',
+                icon: '✉️',
+                name: 'Lettre Lexington',
+                description: 'x2 production totale',
                 cost: 5000000,
                 purchased: false,
                 effect: () => this.calculateNPS()
             },
             {
                 id: 'enlightenment',
+                icon: '🧠',
                 name: 'Réveil Complet',
-                description: 'x2 production - Votre Innie et Outie ne font qu\'un',
+                description: 'x2 production - Union Innie/Outie',
                 cost: 20000000,
                 purchased: false,
                 effect: () => this.calculateNPS()
@@ -191,58 +249,14 @@ class LumonGame {
         ];
 
         this.milestones = [
-            { threshold: 100, message: "Premier quota atteint ! Mr. Milchick est fier de vous." },
-            { threshold: 1000, message: "Excellent travail ! Accès au Music Dance Experience débloqué." },
-            { threshold: 10000, message: "100% de quota ! Une Waffle Party a été organisée en votre honneur !" },
-            { threshold: 50000, message: "Performance remarquable ! Vous recevez des Finger Traps en récompense." },
-            { threshold: 100000, message: "Employé du mois ! Accès à la salle des chèvres débloqué." },
-            { threshold: 500000, message: "Ms. Cobel vous félicite personnellement. Continuez ainsi." },
-            { threshold: 1000000, message: "Vous avez découvert les secrets de l'Aile de la Perpétuité." },
-            { threshold: 5000000, message: "Le Conseil d'Administration reconnaît votre dévouement à Lumon." }
-        ];
-
-        // Number categories like in Severance
-        this.numberCategories = {
-            scary: {
-                numbers: [13, 66, 666, 99, 101, 187, 404, 911],
-                color: '#d9534f',
-                bonus: 2,
-                description: 'SCARY'
-            },
-            sad: {
-                numbers: [0, 7, 21, 42, 69, 273, 365],
-                color: '#5bc0de',
-                bonus: 1.5,
-                description: 'SAD'
-            },
-            angry: {
-                numbers: [8, 18, 88, 108, 188, 888],
-                color: '#f0ad4e',
-                bonus: 1.8,
-                description: 'ANGRY'
-            },
-            happy: {
-                numbers: [3, 7, 11, 17, 23, 29, 31, 37, 41, 43, 47, 53],
-                color: '#5cb85c',
-                bonus: 1.3,
-                description: 'HAPPY'
-            }
-        };
-
-        this.currentNumber = this.getRandomNumber();
-        this.currentCategory = null;
-
-        // Kier Eagan's Nine Core Principles
-        this.kierPrinciples = [
-            "Travail et Tempérance",
-            "Calme et Compassion",
-            "Alimentation et Fraternité",
-            "Humilité et Dévotion",
-            "Vigilance et Progrès",
-            "Retenue et Modestie",
-            "Courage et Discipline",
-            "Intégrité et Innovation",
-            "Persévérance et Unité"
+            { threshold: 100, message: "Premier quota ! Mr. Milchick est fier." },
+            { threshold: 1000, message: "Music Dance Experience débloqué !" },
+            { threshold: 10000, message: "100% quota ! Waffle Party organisée !" },
+            { threshold: 50000, message: "Finger Traps en récompense !" },
+            { threshold: 100000, message: "Employé du mois ! Salle des chèvres accessible." },
+            { threshold: 500000, message: "Ms. Cobel vous félicite personnellement." },
+            { threshold: 1000000, message: "Secrets de l'Aile Perpétuité révélés." },
+            { threshold: 5000000, message: "Le Conseil reconnaît votre dévouement." }
         ];
 
         this.lumonQuotes = [
@@ -250,169 +264,224 @@ class LumonGame {
             "I find the work rewarding.",
             "The work is mysterious and important.",
             "Kier Eagan loves you.",
-            "The refinement process is sacred.",
             "Trust the process.",
             "Your Outie chose this for you."
         ];
+
+        // Matter.js physics setup
+        this.engine = null;
+        this.world = null;
+        this.render = null;
+        this.canvas = null;
+        this.ctx = null;
+        this.numberBodies = [];
+        this.particles = [];
 
         this.init();
     }
 
     init() {
         this.loadGame();
+        this.setupCanvas();
+        this.setupPhysics();
         this.setupEventListeners();
-        this.updateUI();
+        this.renderShop();
         this.startGameLoop();
-        this.renderUpgrades();
         this.showRandomQuote();
-        this.spawnInitialNumbers();
+
+        // Spawn initial numbers
+        setTimeout(() => {
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => this.spawnNumber(), i * 500);
+            }
+        }, 1000);
     }
 
-    showRandomQuote() {
-        const quote = this.lumonQuotes[Math.floor(Math.random() * this.lumonQuotes.length)];
-        this.showNotification(quote);
+    setupCanvas() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        // Set canvas size
+        const container = this.canvas.parentElement;
+        this.canvas.width = container.clientWidth;
+        this.canvas.height = container.clientHeight;
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const container = this.canvas.parentElement;
+            this.canvas.width = container.clientWidth;
+            this.canvas.height = container.clientHeight;
+        });
+
+        // Canvas click handler
+        this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+    }
+
+    setupPhysics() {
+        // Create Matter.js engine
+        const Engine = Matter.Engine;
+        const World = Matter.World;
+        const Bodies = Matter.Bodies;
+
+        this.engine = Engine.create();
+        this.world = this.engine.world;
+        this.engine.world.gravity.y = 0.5; // Gentle gravity
+
+        // Create ground
+        const ground = Bodies.rectangle(
+            this.canvas.width / 2,
+            this.canvas.height + 25,
+            this.canvas.width,
+            50,
+            { isStatic: true }
+        );
+        World.add(this.world, ground);
+
+        // Create walls
+        const leftWall = Bodies.rectangle(-25, this.canvas.height / 2, 50, this.canvas.height, { isStatic: true });
+        const rightWall = Bodies.rectangle(this.canvas.width + 25, this.canvas.height / 2, 50, this.canvas.height, { isStatic: true });
+        World.add(this.world, [leftWall, rightWall]);
     }
 
     setupEventListeners() {
         // Save button
         document.getElementById('saveButton').addEventListener('click', () => {
             this.saveGame();
-            this.showNotification('Progression sauvegardée !');
+            this.showNotification('💾 Progression sauvegardée !');
         });
 
-        // Tabs
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const targetTab = tab.dataset.tab;
-                this.switchTab(targetTab);
+        // Shop tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                this.switchShopTab(tab);
+            });
+        });
+
+        // Bin clicks
+        document.querySelectorAll('.bin').forEach(bin => {
+            bin.addEventListener('click', () => {
+                const category = bin.dataset.category;
+                this.sortNumber(category);
             });
         });
 
         // Prestige button
-        document.getElementById('prestigeButton').addEventListener('click', () => {
-            this.performPrestige();
-        });
-
-        // Bin click handlers
-        document.querySelectorAll('.bin-body').forEach(bin => {
-            bin.addEventListener('click', () => {
-                const category = bin.dataset.bin;
-                this.sortNumber(category);
-            });
-        });
+        const prestigeBtn = document.getElementById('prestigeButton');
+        if (prestigeBtn) {
+            prestigeBtn.addEventListener('click', () => this.performPrestige());
+        }
 
         // Auto-save every 30 seconds
         setInterval(() => this.saveGame(), 30000);
     }
 
-    spawnInitialNumbers() {
-        // Spawn 3 numbers to start
-        for (let i = 0; i < 3; i++) {
-            this.spawnNumber();
-        }
-    }
-
     spawnNumber() {
-        if (this.numberQueue.length >= this.maxQueueSize) return;
+        if (this.numberBodies.length >= this.maxNumbers) return;
 
         const number = this.getRandomNumber();
         const category = this.getNumberCategory(number);
 
-        this.numberQueue.push({
+        // Random spawn position at top
+        const x = Math.random() * (this.canvas.width - 100) + 50;
+        const y = -50;
+
+        // Create physics body
+        const Bodies = Matter.Bodies;
+        const body = Bodies.circle(x, y, 30, {
+            restitution: 0.6,
+            friction: 0.1,
+            density: 0.001
+        });
+
+        // Add to world
+        Matter.World.add(this.world, body);
+
+        // Store number data
+        const numberObj = {
+            body: body,
             value: number,
             category: category ? category.name : null,
+            color: category ? category.color : '#6aba9a',
+            selected: false,
             id: Date.now() + Math.random()
-        });
+        };
 
-        this.renderQueue();
+        this.numberBodies.push(numberObj);
     }
 
-    renderQueue() {
-        const queueContainer = document.getElementById('numberQueue');
-        queueContainer.innerHTML = '';
+    handleCanvasClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-        this.numberQueue.forEach(numberObj => {
-            const numberEl = document.createElement('div');
-            numberEl.className = `number-item ${numberObj.category || ''}`;
-            numberEl.textContent = numberObj.value;
-            numberEl.dataset.numberId = numberObj.id;
+        // Check if clicked on a number
+        for (let numObj of this.numberBodies) {
+            const pos = numObj.body.position;
+            const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
 
-            numberEl.addEventListener('click', () => {
-                this.selectNumber(numberObj);
-            });
+            if (dist < 35) {
+                // Deselect all
+                this.numberBodies.forEach(n => n.selected = false);
 
-            queueContainer.appendChild(numberEl);
-        });
-    }
+                // Select this one
+                numObj.selected = true;
+                this.selectedNumber = numObj;
 
-    selectNumber(numberObj) {
-        // Deselect all
-        document.querySelectorAll('.number-item').forEach(el => {
-            el.classList.remove('selected');
-        });
+                // Highlight correct bin
+                this.highlightBin(numObj.category);
 
-        // Select this number
-        this.selectedNumber = numberObj;
-        const numberEl = document.querySelector(`[data-number-id="${numberObj.id}"]`);
-        if (numberEl) {
-            numberEl.classList.add('selected');
+                // Create particle effect
+                this.createParticles(pos.x, pos.y, numObj.color);
+                return;
+            }
         }
-
-        // Highlight correct bin
-        this.highlightCorrectBin(numberObj.category);
     }
 
-    highlightCorrectBin(category) {
+    highlightBin(category) {
         // Remove all highlights
         document.querySelectorAll('.bin').forEach(bin => {
             bin.classList.remove('highlight');
         });
 
-        // Highlight the correct bin
+        // Highlight correct bin
         if (category) {
-            const correctBin = document.querySelector(`.${category}-bin`);
-            if (correctBin) {
-                correctBin.classList.add('highlight');
-            }
+            const bin = document.querySelector(`.${category}-bin`);
+            if (bin) bin.classList.add('highlight');
         }
     }
 
     sortNumber(targetCategory) {
         if (!this.selectedNumber) {
-            this.showNotification('Sélectionnez d\'abord un nombre !');
+            this.showNotification('⚠️ Sélectionnez d\'abord un nombre !');
             return;
         }
 
-        const isCorrect = this.selectedNumber.category === targetCategory;
-        const number = this.selectedNumber.value;
-
-        // Remove from queue
-        this.numberQueue = this.numberQueue.filter(n => n.id !== this.selectedNumber.id);
+        const numObj = this.selectedNumber;
+        const isCorrect = numObj.category === targetCategory;
 
         // Calculate reward
         let reward = this.clickPower;
 
         if (isCorrect) {
             const category = this.numberCategories[targetCategory];
-            if (category) {
-                reward *= category.bonus;
-            }
-            this.combo++;
-            this.correctSorts++;
-            this.categoryCount[targetCategory]++;
+            reward *= category.bonus;
 
             // Combo bonus
+            this.combo++;
+            if (this.combo > this.maxCombo) this.maxCombo = this.combo;
             if (this.combo > 1) {
                 reward *= (1 + (this.combo * 0.1)); // +10% per combo
             }
 
-            // Show success
-            this.showReward(`✓ Correct ! ${this.numberCategories[targetCategory].description} +${this.formatNumber(reward)}`);
+            this.correctSorts++;
+            this.categoryCount[targetCategory]++;
+
+            this.showReward(`✓ ${category.description} ! +${this.formatNumber(reward)} (Combo ${this.combo}x)`);
         } else {
-            // Wrong category - lose combo
-            reward = this.clickPower * 0.5; // Penalty
+            reward *= 0.5; // Penalty
             this.combo = 0;
-            this.showReward(`✗ Mauvaise catégorie ! +${this.formatNumber(reward)} seulement`);
+            this.showReward(`✗ Erreur ! +${this.formatNumber(reward)} seulement`);
         }
 
         this.numbers += reward;
@@ -421,48 +490,55 @@ class LumonGame {
 
         // Track sort speed
         this.sortTimes.push(Date.now());
-        if (this.sortTimes.length > 10) {
-            this.sortTimes.shift();
-        }
+        if (this.sortTimes.length > 10) this.sortTimes.shift();
+
+        // Remove from physics world
+        Matter.World.remove(this.world, numObj.body);
+        this.numberBodies = this.numberBodies.filter(n => n.id !== numObj.id);
+
+        // Create explosion particles
+        this.createExplosion(numObj.body.position.x, numObj.body.position.y, numObj.color, isCorrect);
 
         // Clear selection
         this.selectedNumber = null;
-        document.querySelectorAll('.number-item').forEach(el => {
-            el.classList.remove('selected');
-        });
-        document.querySelectorAll('.bin').forEach(bin => {
-            bin.classList.remove('highlight');
-        });
+        document.querySelectorAll('.bin').forEach(bin => bin.classList.remove('highlight'));
 
-        this.renderQueue();
-        this.updateUI();
-        this.updateCategoryCounters();
         this.checkMilestones();
+        this.updateUI();
     }
 
-    updateCategoryCounters() {
-        Object.keys(this.categoryCount).forEach(cat => {
-            const el = document.getElementById(`${cat}Count`);
-            if (el) {
-                el.textContent = this.categoryCount[cat];
-            }
-        });
+    createParticles(x, y, color) {
+        for (let i = 0; i < 5; i++) {
+            this.particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                life: 1,
+                color: color,
+                size: Math.random() * 4 + 2
+            });
+        }
     }
 
-    getSortSpeed() {
-        if (this.sortTimes.length < 2) return 0;
-
-        const timeSpan = (this.sortTimes[this.sortTimes.length - 1] - this.sortTimes[0]) / 1000 / 60; // minutes
-        return Math.round(this.sortTimes.length / timeSpan);
-    }
-
-    getAccuracy() {
-        if (this.totalSorted === 0) return 100;
-        return Math.round((this.correctSorts / this.totalSorted) * 100);
+    createExplosion(x, y, color, success) {
+        const count = success ? 20 : 10;
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count;
+            const speed = Math.random() * 3 + 2;
+            this.particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                color: success ? color : '#666',
+                size: Math.random() * 6 + 3
+            });
+        }
     }
 
     getRandomNumber() {
-        // Get all numbers from all categories
         const allNumbers = Object.values(this.numberCategories).flatMap(cat => cat.numbers);
         return allNumbers[Math.floor(Math.random() * allNumbers.length)];
     }
@@ -476,40 +552,105 @@ class LumonGame {
         return null;
     }
 
+    renderCanvas() {
+        // Clear canvas
+        this.ctx.fillStyle = '#0a1a0a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw grid
+        this.ctx.strokeStyle = '#1a2a2a';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < this.canvas.width; i += 50) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(i, 0);
+            this.ctx.lineTo(i, this.canvas.height);
+            this.ctx.stroke();
+        }
+        for (let i = 0; i < this.canvas.height; i += 50) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, i);
+            this.ctx.lineTo(this.canvas.width, i);
+            this.ctx.stroke();
+        }
+
+        // Draw particles
+        this.particles.forEach((p, index) => {
+            this.ctx.fillStyle = p.color;
+            this.ctx.globalAlpha = p.life;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+
+            // Update particle
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.1; // Gravity
+            p.life -= 0.02;
+
+            if (p.life <= 0) {
+                this.particles.splice(index, 1);
+            }
+        });
+
+        // Draw numbers
+        this.numberBodies.forEach(numObj => {
+            const pos = numObj.body.position;
+            const angle = numObj.body.angle;
+
+            this.ctx.save();
+            this.ctx.translate(pos.x, pos.y);
+            this.ctx.rotate(angle);
+
+            // Draw circle
+            this.ctx.fillStyle = numObj.selected ? '#fff' : numObj.color;
+            this.ctx.strokeStyle = numObj.selected ? numObj.color : '#fff';
+            this.ctx.lineWidth = numObj.selected ? 4 : 2;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.stroke();
+
+            // Draw number
+            this.ctx.fillStyle = numObj.selected ? numObj.color : '#0a1a0a';
+            this.ctx.font = 'bold 20px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(numObj.value, 0, 0);
+
+            // Glow effect if selected
+            if (numObj.selected) {
+                this.ctx.shadowBlur = 20;
+                this.ctx.shadowColor = numObj.color;
+            }
+
+            this.ctx.restore();
+        });
+    }
 
     calculateNPS() {
         let nps = 0;
 
-        // Base production from automation upgrades
+        // Base production
         this.automationUpgrades.forEach(upgrade => {
             nps += upgrade.baseProduction * upgrade.count;
         });
 
-        // Check if automation should be enabled
+        // Auto-sort system
         const totalAutomation = this.automationUpgrades.reduce((sum, u) => sum + u.count, 0);
-        this.autoSortEnabled = totalAutomation >= 3; // Enable auto-sort when you have 3+ automation upgrades
+        this.autoSortEnabled = totalAutomation >= 3;
 
-        // Adjust spawn rate based on automation
+        // Adjust spawn rate
         if (totalAutomation > 0) {
-            this.spawnInterval = Math.max(1000, 3000 - (totalAutomation * 200)); // Faster spawns with more automation
+            this.spawnInterval = Math.max(1000, 3000 - (totalAutomation * 150));
         }
 
-        // Apply efficiency multipliers
-        if (this.efficiencyUpgrades.find(u => u.id === 'handbook' && u.purchased)) {
-            nps *= 2;
-        }
-        if (this.efficiencyUpgrades.find(u => u.id === 'fingerTraps' && u.purchased)) {
-            nps *= 1.1;
-        }
-        if (this.efficiencyUpgrades.find(u => u.id === 'overtime' && u.purchased)) {
-            nps *= 1.25;
-        }
-        if (this.efficiencyUpgrades.find(u => u.id === 'lexington' && u.purchased)) {
-            nps *= 2;
-        }
-        if (this.efficiencyUpgrades.find(u => u.id === 'enlightenment' && u.purchased)) {
-            nps *= 2;
-        }
+        // Efficiency multipliers
+        if (this.efficiencyUpgrades.find(u => u.id === 'handbook' && u.purchased)) nps *= 2;
+        if (this.efficiencyUpgrades.find(u => u.id === 'fingerTraps' && u.purchased)) nps *= 1.1;
+        if (this.efficiencyUpgrades.find(u => u.id === 'overtime' && u.purchased)) nps *= 1.25;
+        if (this.efficiencyUpgrades.find(u => u.id === 'lexington' && u.purchased)) nps *= 2;
+        if (this.efficiencyUpgrades.find(u => u.id === 'enlightenment' && u.purchased)) nps *= 2;
 
         // Merit tokens bonus
         nps *= (1 + this.meritTokens * 0.1);
@@ -522,14 +663,13 @@ class LumonGame {
         if (!upgrade) return;
 
         const cost = this.getUpgradeCost(upgrade);
-
         if (this.numbers >= cost) {
             this.numbers -= cost;
             upgrade.count++;
             this.calculateNPS();
-            this.updateUI();
-            this.renderUpgrades();
+            this.renderShop();
             this.saveGame();
+            this.showNotification(`✓ ${upgrade.icon} ${upgrade.name} acheté !`);
         }
     }
 
@@ -542,9 +682,9 @@ class LumonGame {
             upgrade.purchased = true;
             upgrade.effect();
             this.calculateNPS();
-            this.updateUI();
-            this.renderUpgrades();
+            this.renderShop();
             this.saveGame();
+            this.showNotification(`✓ ${upgrade.icon} ${upgrade.name} acheté !`);
         }
     }
 
@@ -552,139 +692,92 @@ class LumonGame {
         return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.count));
     }
 
-    renderUpgrades() {
+    renderShop() {
         // Render automation upgrades
-        const automationContainer = document.getElementById('automation');
-        automationContainer.innerHTML = '';
+        const automationList = document.getElementById('automationList');
+        automationList.innerHTML = '';
 
         this.automationUpgrades.forEach(upgrade => {
             const cost = this.getUpgradeCost(upgrade);
             const affordable = this.numbers >= cost;
 
-            const upgradeDiv = document.createElement('div');
-            upgradeDiv.className = `upgrade-item ${affordable ? 'affordable' : ''}`;
-            upgradeDiv.dataset.upgradeId = upgrade.id;
-            upgradeDiv.dataset.upgradeType = 'automation';
-            upgradeDiv.innerHTML = `
-                <div class="upgrade-info">
-                    <h3>${upgrade.name}</h3>
-                    <p>${upgrade.description}</p>
-                    <p>Production: ${this.formatNumber(upgrade.baseProduction)}/s</p>
+            const item = document.createElement('div');
+            item.className = `shop-item ${affordable ? 'affordable' : ''}`;
+            item.innerHTML = `
+                <div class="shop-item-header">
+                    <span class="shop-item-icon">${upgrade.icon}</span>
+                    <div class="shop-item-title">
+                        <h4>${upgrade.name}</h4>
+                        <div class="shop-item-count">Possédés: ${upgrade.count}</div>
+                    </div>
                 </div>
-                <div class="upgrade-details">
-                    <div class="upgrade-count">Possédés: ${upgrade.count}</div>
-                    <div class="upgrade-cost">${this.formatNumber(cost)}</div>
-                    <button class="upgrade-button" data-upgrade-id="${upgrade.id}">
+                <div class="shop-item-desc">${upgrade.description}</div>
+                <div class="shop-item-footer">
+                    <span class="shop-item-cost">💎 ${this.formatNumber(cost)}</span>
+                    <button class="shop-item-btn" ${affordable ? '' : 'disabled'}>
                         Acheter
                     </button>
                 </div>
             `;
 
-            const button = upgradeDiv.querySelector('button');
-            button.disabled = !affordable;
-            button.addEventListener('click', () => {
-                this.buyAutomationUpgrade(upgrade.id);
-            });
+            const btn = item.querySelector('button');
+            btn.disabled = !affordable;
+            btn.addEventListener('click', () => this.buyAutomationUpgrade(upgrade.id));
 
-            automationContainer.appendChild(upgradeDiv);
+            automationList.appendChild(item);
         });
 
         // Render efficiency upgrades
-        const efficiencyContainer = document.getElementById('efficiency');
-        efficiencyContainer.innerHTML = '';
+        const efficiencyList = document.getElementById('efficiencyList');
+        efficiencyList.innerHTML = '';
 
         this.efficiencyUpgrades.forEach(upgrade => {
             const affordable = this.numbers >= upgrade.cost && !upgrade.purchased;
 
-            const upgradeDiv = document.createElement('div');
-            upgradeDiv.className = `upgrade-item ${affordable ? 'affordable' : ''} ${upgrade.purchased ? 'maxed' : ''}`;
-            upgradeDiv.dataset.upgradeId = upgrade.id;
-            upgradeDiv.dataset.upgradeType = 'efficiency';
-            upgradeDiv.innerHTML = `
-                <div class="upgrade-info">
-                    <h3>${upgrade.name}</h3>
-                    <p>${upgrade.description}</p>
+            const item = document.createElement('div');
+            item.className = `shop-item ${affordable ? 'affordable' : ''} ${upgrade.purchased ? 'maxed' : ''}`;
+            item.innerHTML = `
+                <div class="shop-item-header">
+                    <span class="shop-item-icon">${upgrade.icon}</span>
+                    <div class="shop-item-title">
+                        <h4>${upgrade.name}</h4>
+                        <div class="shop-item-count">${upgrade.purchased ? '✓ Possédé' : 'Disponible'}</div>
+                    </div>
                 </div>
-                <div class="upgrade-details">
-                    <div class="upgrade-cost">${upgrade.purchased ? 'ACHETÉ' : this.formatNumber(upgrade.cost)}</div>
-                    <button class="upgrade-button" data-upgrade-id="${upgrade.id}">
+                <div class="shop-item-desc">${upgrade.description}</div>
+                <div class="shop-item-footer">
+                    <span class="shop-item-cost">${upgrade.purchased ? '✓ ACHETÉ' : '💎 ' + this.formatNumber(upgrade.cost)}</span>
+                    <button class="shop-item-btn" ${affordable ? '' : 'disabled'}>
                         ${upgrade.purchased ? 'Possédé' : 'Acheter'}
                     </button>
                 </div>
             `;
 
-            const button = upgradeDiv.querySelector('button');
-            button.disabled = !affordable;
+            const btn = item.querySelector('button');
+            btn.disabled = !affordable;
             if (!upgrade.purchased) {
-                button.addEventListener('click', () => {
-                    this.buyEfficiencyUpgrade(upgrade.id);
-                });
+                btn.addEventListener('click', () => this.buyEfficiencyUpgrade(upgrade.id));
             }
 
-            efficiencyContainer.appendChild(upgradeDiv);
+            efficiencyList.appendChild(item);
         });
     }
 
-    updateUpgradeButtons() {
-        // Update automation upgrade buttons
-        this.automationUpgrades.forEach(upgrade => {
-            const cost = this.getUpgradeCost(upgrade);
-            const affordable = this.numbers >= cost;
-
-            const upgradeDiv = document.querySelector(`.upgrade-item[data-upgrade-type="automation"][data-upgrade-id="${upgrade.id}"]`);
-            if (upgradeDiv) {
-                const button = upgradeDiv.querySelector('button');
-                if (button) {
-                    button.disabled = !affordable;
-                }
-
-                // Update affordable class
-                if (affordable) {
-                    upgradeDiv.classList.add('affordable');
-                } else {
-                    upgradeDiv.classList.remove('affordable');
-                }
-            }
+    switchShopTab(tabName) {
+        // Update buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
 
-        // Update efficiency upgrade buttons
-        this.efficiencyUpgrades.forEach(upgrade => {
-            const affordable = this.numbers >= upgrade.cost && !upgrade.purchased;
-
-            const upgradeDiv = document.querySelector(`.upgrade-item[data-upgrade-type="efficiency"][data-upgrade-id="${upgrade.id}"]`);
-            if (upgradeDiv) {
-                const button = upgradeDiv.querySelector('button');
-                if (button) {
-                    button.disabled = !affordable;
-                }
-
-                // Update affordable class
-                if (affordable) {
-                    upgradeDiv.classList.add('affordable');
-                } else {
-                    upgradeDiv.classList.remove('affordable');
-                }
-            }
+        // Update content
+        document.querySelectorAll('.shop-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.id === tabName);
         });
-    }
-
-    switchTab(tabName) {
-        // Update tab buttons
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-        // Update tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(tabName).classList.add('active');
     }
 
     performPrestige() {
         if (this.totalNumbersRefined < 1000000) {
-            this.showNotification('Vous devez raffiner au moins 1,000,000 nombres avant la Severance.');
+            this.showNotification('⚠️ Il faut 1M de nombres raffinés !');
             return;
         }
 
@@ -699,104 +792,126 @@ class LumonGame {
         // Reset game
         this.numbers = 0;
         this.clickPower = 1;
-        this.numbersPerSecond = 0;
-        this.level = 1;
+        this.combo = 0;
+        this.totalSorted = 0;
+        this.correctSorts = 0;
+        this.sortTimes = [];
+        this.categoryCount = { scary: 0, angry: 0, sad: 0, happy: 0 };
         this.totalNumbersRefined = 0;
 
         // Reset upgrades
-        this.automationUpgrades.forEach(upgrade => {
-            upgrade.count = 0;
+        this.automationUpgrades.forEach(u => u.count = 0);
+        this.efficiencyUpgrades.forEach(u => u.purchased = false);
+
+        // Clear physics world
+        this.numberBodies.forEach(numObj => {
+            Matter.World.remove(this.world, numObj.body);
         });
-        this.efficiencyUpgrades.forEach(upgrade => {
-            upgrade.purchased = false;
-        });
+        this.numberBodies = [];
 
         this.calculateNPS();
-        this.updateUI();
-        this.renderUpgrades();
+        this.renderShop();
         this.saveGame();
-
-        this.showNotification(`Severance effectuée ! Vous avez gagné ${newTokens} Jetons de Mérite !`);
+        this.showNotification(`🧠 Severance effectuée ! +${newTokens} Jetons de Mérite !`);
     }
 
     checkMilestones() {
         this.milestones.forEach(milestone => {
             if (this.totalNumbersRefined >= milestone.threshold && !milestone.reached) {
                 milestone.reached = true;
-                this.showReward(milestone.message);
-
-                if (milestone.threshold >= 1000) {
-                    this.level = Math.floor(Math.log10(this.totalNumbersRefined)) - 1;
-                }
+                this.showReward(`🎉 ${milestone.message}`);
+                this.level = Math.floor(Math.log10(this.totalNumbersRefined)) || 1;
             }
         });
     }
 
     showReward(message) {
-        const rewardEl = document.getElementById('rewardMessage');
-        rewardEl.textContent = message;
-        rewardEl.classList.remove('hidden');
-
-        setTimeout(() => {
-            rewardEl.classList.add('hidden');
-        }, 5000);
+        const toast = document.getElementById('rewardMessage');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
     showNotification(message) {
-        const notificationEl = document.getElementById('notification');
-        notificationEl.textContent = message;
-        notificationEl.classList.remove('hidden');
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.classList.add('show');
+        setTimeout(() => notification.classList.remove('show'), 3000);
+    }
 
-        setTimeout(() => {
-            notificationEl.classList.add('hidden');
-        }, 3000);
+    showRandomQuote() {
+        const quote = this.lumonQuotes[Math.floor(Math.random() * this.lumonQuotes.length)];
+        this.showNotification(quote);
+    }
+
+    getSortSpeed() {
+        if (this.sortTimes.length < 2) return 0;
+        const timeSpan = (this.sortTimes[this.sortTimes.length - 1] - this.sortTimes[0]) / 1000 / 60;
+        return Math.round(this.sortTimes.length / timeSpan) || 0;
+    }
+
+    getAccuracy() {
+        if (this.totalSorted === 0) return 100;
+        return Math.round((this.correctSorts / this.totalSorted) * 100);
     }
 
     startGameLoop() {
-        setInterval(() => {
+        const gameLoop = () => {
             const now = Date.now();
 
-            // Add passive income
-            const passiveGain = this.numbersPerSecond / 10;
-            this.numbers += passiveGain;
-            this.totalNumbersRefined += passiveGain;
+            // Update physics
+            Matter.Engine.update(this.engine, 1000 / 60);
 
-            // Spawn new numbers periodically
+            // Render canvas
+            this.renderCanvas();
+
+            // Spawn new numbers
             if (now - this.lastSpawnTime >= this.spawnInterval) {
                 this.spawnNumber();
                 this.lastSpawnTime = now;
             }
 
-            // Auto-sort if automation is enabled
-            if (this.autoSortEnabled && this.numberQueue.length > 0) {
-                const numberToSort = this.numberQueue[0];
-                if (numberToSort.category) {
-                    this.selectedNumber = numberToSort;
-                    this.sortNumber(numberToSort.category);
+            // Auto-sort
+            if (this.autoSortEnabled && this.numberBodies.length > 0 && !this.selectedNumber) {
+                const numObj = this.numberBodies[0];
+                if (numObj.category) {
+                    this.selectedNumber = numObj;
+                    numObj.selected = true;
+                    setTimeout(() => this.sortNumber(numObj.category), 100);
                 }
             }
 
-            this.updateUI();
-            this.checkMilestones();
-        }, 100); // Update every 100ms (10 times per second)
+            // Passive income
+            const passiveGain = this.numbersPerSecond / 60;
+            this.numbers += passiveGain;
+            this.totalNumbersRefined += passiveGain;
+
+            // Update UI (throttled to 10 FPS)
+            if (now % 6 < 2) {
+                this.updateUI();
+            }
+
+            requestAnimationFrame(gameLoop);
+        };
+
+        gameLoop();
     }
 
     updateUI() {
+        // Stats
         document.getElementById('numbers').textContent = this.formatNumber(this.numbers);
         document.getElementById('perSecond').textContent = this.formatNumber(this.numbersPerSecond);
         document.getElementById('level').textContent = this.level;
+        document.getElementById('accuracy').textContent = this.getAccuracy() + '%';
+        document.getElementById('comboCount').textContent = this.combo + 'x';
 
-        // Update sorting stats
-        const comboEl = document.getElementById('comboCount');
-        if (comboEl) comboEl.textContent = this.combo;
+        // Category counts
+        Object.keys(this.categoryCount).forEach(cat => {
+            const el = document.getElementById(`${cat}Count`);
+            if (el) el.textContent = this.categoryCount[cat];
+        });
 
-        const accuracyEl = document.getElementById('accuracy');
-        if (accuracyEl) accuracyEl.textContent = this.getAccuracy();
-
-        const sortSpeedEl = document.getElementById('sortSpeed');
-        if (sortSpeedEl) sortSpeedEl.textContent = this.getSortSpeed();
-
-        // Update quota (percentage to next milestone)
+        // Quota
         const nextMilestone = this.milestones.find(m => !m.reached);
         if (nextMilestone) {
             const progress = Math.min((this.totalNumbersRefined / nextMilestone.threshold) * 100, 100);
@@ -805,16 +920,60 @@ class LumonGame {
             document.getElementById('quota').textContent = '100%';
         }
 
-        // Update prestige info
+        // Auto-sort status
+        const autoStatus = document.getElementById('autoStatus');
+        if (autoStatus) {
+            autoStatus.textContent = this.autoSortEnabled ? 'ON' : 'OFF';
+            autoStatus.style.color = this.autoSortEnabled ? '#5cb85c' : '#d9534f';
+        }
+
+        // Spawn rate
+        const spawnRate = document.getElementById('spawnRate');
+        if (spawnRate) {
+            spawnRate.textContent = (this.spawnInterval / 1000).toFixed(1) + 's';
+        }
+
+        // Prestige info
         document.getElementById('meritTokens').textContent = this.meritTokens;
         const potentialTokens = Math.floor(Math.sqrt(this.totalNumbersRefined / 100000));
         document.getElementById('potentialTokens').textContent = potentialTokens;
 
-        const prestigeButton = document.getElementById('prestigeButton');
-        prestigeButton.disabled = this.totalNumbersRefined < 1000000;
+        const prestigeBtn = document.getElementById('prestigeButton');
+        if (prestigeBtn) {
+            prestigeBtn.disabled = this.totalNumbersRefined < 1000000;
+        }
 
-        // Update upgrade buttons state
-        this.updateUpgradeButtons();
+        // Update shop button states
+        this.updateShopButtons();
+    }
+
+    updateShopButtons() {
+        // Update automation buttons
+        this.automationUpgrades.forEach(upgrade => {
+            const cost = this.getUpgradeCost(upgrade);
+            const affordable = this.numbers >= cost;
+            const buttons = document.querySelectorAll(`[data-upgrade-id="${upgrade.id}"]`);
+            buttons.forEach(btn => {
+                btn.disabled = !affordable;
+                const item = btn.closest('.shop-item');
+                if (item) {
+                    item.classList.toggle('affordable', affordable);
+                }
+            });
+        });
+
+        // Update efficiency buttons
+        this.efficiencyUpgrades.forEach(upgrade => {
+            const affordable = this.numbers >= upgrade.cost && !upgrade.purchased;
+            const buttons = document.querySelectorAll(`[data-upgrade-id="${upgrade.id}"]`);
+            buttons.forEach(btn => {
+                btn.disabled = !affordable;
+                const item = btn.closest('.shop-item');
+                if (item) {
+                    item.classList.toggle('affordable', affordable);
+                }
+            });
+        });
     }
 
     formatNumber(num) {
@@ -833,9 +992,14 @@ class LumonGame {
             level: this.level,
             meritTokens: this.meritTokens,
             totalNumbersRefined: this.totalNumbersRefined,
-            automationUpgrades: this.automationUpgrades,
-            efficiencyUpgrades: this.efficiencyUpgrades,
-            milestones: this.milestones
+            combo: this.combo,
+            maxCombo: this.maxCombo,
+            totalSorted: this.totalSorted,
+            correctSorts: this.correctSorts,
+            categoryCount: this.categoryCount,
+            automationUpgrades: this.automationUpgrades.map(u => ({ id: u.id, count: u.count })),
+            efficiencyUpgrades: this.efficiencyUpgrades.map(u => ({ id: u.id, purchased: u.purchased })),
+            milestones: this.milestones.map(m => ({ threshold: m.threshold, reached: m.reached }))
         };
 
         localStorage.setItem('lumonSave', JSON.stringify(saveData));
@@ -843,55 +1007,54 @@ class LumonGame {
 
     loadGame() {
         const saveData = localStorage.getItem('lumonSave');
+        if (!saveData) return;
 
-        if (saveData) {
-            try {
-                const data = JSON.parse(saveData);
+        try {
+            const data = JSON.parse(saveData);
 
-                this.numbers = data.numbers || 0;
-                this.clickPower = data.clickPower || 1;
-                this.numbersPerSecond = data.numbersPerSecond || 0;
-                this.level = data.level || 1;
-                this.meritTokens = data.meritTokens || 0;
-                this.totalNumbersRefined = data.totalNumbersRefined || 0;
+            this.numbers = data.numbers || 0;
+            this.clickPower = data.clickPower || 1;
+            this.numbersPerSecond = data.numbersPerSecond || 0;
+            this.level = data.level || 1;
+            this.meritTokens = data.meritTokens || 0;
+            this.totalNumbersRefined = data.totalNumbersRefined || 0;
+            this.combo = data.combo || 0;
+            this.maxCombo = data.maxCombo || 0;
+            this.totalSorted = data.totalSorted || 0;
+            this.correctSorts = data.correctSorts || 0;
+            this.categoryCount = data.categoryCount || { scary: 0, angry: 0, sad: 0, happy: 0 };
 
-                // Load upgrades
-                if (data.automationUpgrades) {
-                    data.automationUpgrades.forEach((savedUpgrade, index) => {
-                        if (this.automationUpgrades[index]) {
-                            this.automationUpgrades[index].count = savedUpgrade.count;
-                        }
-                    });
-                }
-
-                if (data.efficiencyUpgrades) {
-                    data.efficiencyUpgrades.forEach((savedUpgrade, index) => {
-                        if (this.efficiencyUpgrades[index]) {
-                            this.efficiencyUpgrades[index].purchased = savedUpgrade.purchased;
-                        }
-                    });
-                }
-
-                if (data.milestones) {
-                    data.milestones.forEach((savedMilestone, index) => {
-                        if (this.milestones[index]) {
-                            this.milestones[index].reached = savedMilestone.reached;
-                        }
-                    });
-                }
-
-                // Recalculate production
-                this.calculateNPS();
-
-                this.showNotification('Bienvenue de retour chez Lumon Industries !');
-            } catch (e) {
-                console.error('Erreur lors du chargement de la sauvegarde:', e);
+            // Load upgrades
+            if (data.automationUpgrades) {
+                data.automationUpgrades.forEach(saved => {
+                    const upgrade = this.automationUpgrades.find(u => u.id === saved.id);
+                    if (upgrade) upgrade.count = saved.count;
+                });
             }
+
+            if (data.efficiencyUpgrades) {
+                data.efficiencyUpgrades.forEach(saved => {
+                    const upgrade = this.efficiencyUpgrades.find(u => u.id === saved.id);
+                    if (upgrade) upgrade.purchased = saved.purchased;
+                });
+            }
+
+            if (data.milestones) {
+                data.milestones.forEach(saved => {
+                    const milestone = this.milestones.find(m => m.threshold === saved.threshold);
+                    if (milestone) milestone.reached = saved.reached;
+                });
+            }
+
+            this.calculateNPS();
+            this.showNotification('💾 Bienvenue de retour chez Lumon !');
+        } catch (e) {
+            console.error('Erreur chargement sauvegarde:', e);
         }
     }
 }
 
-// Start the game when the page loads
+// Start game when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
     new LumonGame();
 });
