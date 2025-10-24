@@ -9,11 +9,24 @@ class LumonGame {
         this.meritTokens = 0;
         this.totalNumbersRefined = 0;
 
+        // New sorting system
+        this.numberQueue = [];
+        this.maxQueueSize = 8;
+        this.selectedNumber = null;
+        this.combo = 0;
+        this.totalSorted = 0;
+        this.correctSorts = 0;
+        this.sortTimes = [];
+        this.categoryCount = { scary: 0, angry: 0, sad: 0, happy: 0 };
+        this.autoSortEnabled = false;
+        this.lastSpawnTime = Date.now();
+        this.spawnInterval = 3000; // 3 seconds base
+
         this.automationUpgrades = [
             {
                 id: 'intern',
                 name: 'Nouvel Innie',
-                description: 'Un employé fraîchement severed pour le raffinement',
+                description: 'Génère des nombres + trie manuellement',
                 baseCost: 10,
                 baseProduction: 0.1,
                 count: 0,
@@ -22,7 +35,7 @@ class LumonGame {
             {
                 id: 'colleague',
                 name: 'Équipe MDR',
-                description: 'Collègues dévoués au travail mystérieux',
+                description: 'Augmente la vitesse de spawn',
                 baseCost: 100,
                 baseProduction: 1,
                 count: 0,
@@ -31,7 +44,7 @@ class LumonGame {
             {
                 id: 'milchick',
                 name: 'Mr. Milchick',
-                description: 'Le superviseur motivant de l\'étage',
+                description: '🤖 Active le tri automatique ! (3+ upgrades)',
                 baseCost: 1100,
                 baseProduction: 8,
                 count: 0,
@@ -248,11 +261,11 @@ class LumonGame {
     init() {
         this.loadGame();
         this.setupEventListeners();
-        this.updateNumberDisplay();
         this.updateUI();
         this.startGameLoop();
         this.renderUpgrades();
         this.showRandomQuote();
+        this.spawnInitialNumbers();
     }
 
     showRandomQuote() {
@@ -261,11 +274,6 @@ class LumonGame {
     }
 
     setupEventListeners() {
-        // Click button
-        document.getElementById('clickButton').addEventListener('click', (e) => {
-            this.handleClick(e);
-        });
-
         // Save button
         document.getElementById('saveButton').addEventListener('click', () => {
             this.saveGame();
@@ -285,8 +293,172 @@ class LumonGame {
             this.performPrestige();
         });
 
+        // Bin click handlers
+        document.querySelectorAll('.bin-body').forEach(bin => {
+            bin.addEventListener('click', () => {
+                const category = bin.dataset.bin;
+                this.sortNumber(category);
+            });
+        });
+
         // Auto-save every 30 seconds
         setInterval(() => this.saveGame(), 30000);
+    }
+
+    spawnInitialNumbers() {
+        // Spawn 3 numbers to start
+        for (let i = 0; i < 3; i++) {
+            this.spawnNumber();
+        }
+    }
+
+    spawnNumber() {
+        if (this.numberQueue.length >= this.maxQueueSize) return;
+
+        const number = this.getRandomNumber();
+        const category = this.getNumberCategory(number);
+
+        this.numberQueue.push({
+            value: number,
+            category: category ? category.name : null,
+            id: Date.now() + Math.random()
+        });
+
+        this.renderQueue();
+    }
+
+    renderQueue() {
+        const queueContainer = document.getElementById('numberQueue');
+        queueContainer.innerHTML = '';
+
+        this.numberQueue.forEach(numberObj => {
+            const numberEl = document.createElement('div');
+            numberEl.className = `number-item ${numberObj.category || ''}`;
+            numberEl.textContent = numberObj.value;
+            numberEl.dataset.numberId = numberObj.id;
+
+            numberEl.addEventListener('click', () => {
+                this.selectNumber(numberObj);
+            });
+
+            queueContainer.appendChild(numberEl);
+        });
+    }
+
+    selectNumber(numberObj) {
+        // Deselect all
+        document.querySelectorAll('.number-item').forEach(el => {
+            el.classList.remove('selected');
+        });
+
+        // Select this number
+        this.selectedNumber = numberObj;
+        const numberEl = document.querySelector(`[data-number-id="${numberObj.id}"]`);
+        if (numberEl) {
+            numberEl.classList.add('selected');
+        }
+
+        // Highlight correct bin
+        this.highlightCorrectBin(numberObj.category);
+    }
+
+    highlightCorrectBin(category) {
+        // Remove all highlights
+        document.querySelectorAll('.bin').forEach(bin => {
+            bin.classList.remove('highlight');
+        });
+
+        // Highlight the correct bin
+        if (category) {
+            const correctBin = document.querySelector(`.${category}-bin`);
+            if (correctBin) {
+                correctBin.classList.add('highlight');
+            }
+        }
+    }
+
+    sortNumber(targetCategory) {
+        if (!this.selectedNumber) {
+            this.showNotification('Sélectionnez d\'abord un nombre !');
+            return;
+        }
+
+        const isCorrect = this.selectedNumber.category === targetCategory;
+        const number = this.selectedNumber.value;
+
+        // Remove from queue
+        this.numberQueue = this.numberQueue.filter(n => n.id !== this.selectedNumber.id);
+
+        // Calculate reward
+        let reward = this.clickPower;
+
+        if (isCorrect) {
+            const category = this.numberCategories[targetCategory];
+            if (category) {
+                reward *= category.bonus;
+            }
+            this.combo++;
+            this.correctSorts++;
+            this.categoryCount[targetCategory]++;
+
+            // Combo bonus
+            if (this.combo > 1) {
+                reward *= (1 + (this.combo * 0.1)); // +10% per combo
+            }
+
+            // Show success
+            this.showReward(`✓ Correct ! ${this.numberCategories[targetCategory].description} +${this.formatNumber(reward)}`);
+        } else {
+            // Wrong category - lose combo
+            reward = this.clickPower * 0.5; // Penalty
+            this.combo = 0;
+            this.showReward(`✗ Mauvaise catégorie ! +${this.formatNumber(reward)} seulement`);
+        }
+
+        this.numbers += reward;
+        this.totalNumbersRefined += reward;
+        this.totalSorted++;
+
+        // Track sort speed
+        this.sortTimes.push(Date.now());
+        if (this.sortTimes.length > 10) {
+            this.sortTimes.shift();
+        }
+
+        // Clear selection
+        this.selectedNumber = null;
+        document.querySelectorAll('.number-item').forEach(el => {
+            el.classList.remove('selected');
+        });
+        document.querySelectorAll('.bin').forEach(bin => {
+            bin.classList.remove('highlight');
+        });
+
+        this.renderQueue();
+        this.updateUI();
+        this.updateCategoryCounters();
+        this.checkMilestones();
+    }
+
+    updateCategoryCounters() {
+        Object.keys(this.categoryCount).forEach(cat => {
+            const el = document.getElementById(`${cat}Count`);
+            if (el) {
+                el.textContent = this.categoryCount[cat];
+            }
+        });
+    }
+
+    getSortSpeed() {
+        if (this.sortTimes.length < 2) return 0;
+
+        const timeSpan = (this.sortTimes[this.sortTimes.length - 1] - this.sortTimes[0]) / 1000 / 60; // minutes
+        return Math.round(this.sortTimes.length / timeSpan);
+    }
+
+    getAccuracy() {
+        if (this.totalSorted === 0) return 100;
+        return Math.round((this.correctSorts / this.totalSorted) * 100);
     }
 
     getRandomNumber() {
@@ -304,96 +476,6 @@ class LumonGame {
         return null;
     }
 
-    handleClick(event) {
-        const category = this.currentCategory;
-        let earnedNumbers = this.clickPower;
-
-        // Apply category bonus
-        if (category) {
-            earnedNumbers *= category.bonus;
-            // Show category message
-            this.showCategoryBonus(category);
-        }
-
-        this.numbers += earnedNumbers;
-        this.totalNumbersRefined += earnedNumbers;
-
-        // Update UI
-        this.updateUI();
-
-        // Create floating number animation
-        this.createFloatingNumber(event.clientX, event.clientY, earnedNumbers, category);
-
-        // Generate new random number
-        this.currentNumber = this.getRandomNumber();
-        this.currentCategory = this.getNumberCategory(this.currentNumber);
-        this.updateNumberDisplay();
-
-        // Check milestones
-        this.checkMilestones();
-    }
-
-    showCategoryBonus(category) {
-        const rewardEl = document.getElementById('rewardMessage');
-        rewardEl.textContent = `${category.description} : Bonus x${category.bonus} !`;
-        rewardEl.style.borderColor = category.color;
-        rewardEl.style.background = category.color + '33';
-        rewardEl.classList.remove('hidden');
-
-        setTimeout(() => {
-            rewardEl.classList.add('hidden');
-            rewardEl.style.borderColor = '';
-            rewardEl.style.background = '';
-        }, 2000);
-    }
-
-    createFloatingNumber(x, y, value, category) {
-        const floatingNum = document.createElement('div');
-        floatingNum.className = 'floating-number';
-        floatingNum.textContent = '+' + this.formatNumber(value);
-        floatingNum.style.left = x + 'px';
-        floatingNum.style.top = y + 'px';
-        if (category) {
-            floatingNum.style.color = category.color;
-        }
-        document.body.appendChild(floatingNum);
-
-        setTimeout(() => {
-            floatingNum.remove();
-        }, 1000);
-    }
-
-    updateNumberDisplay() {
-        const numberValueEl = document.querySelector('.number-value');
-        const numberDisplayEl = document.querySelector('.number-display');
-        const categoryIndicatorEl = document.getElementById('categoryIndicator');
-        const categoryNameEl = document.getElementById('categoryName');
-
-        numberValueEl.textContent = this.currentNumber;
-
-        // Apply category color and show indicator
-        if (this.currentCategory) {
-            numberValueEl.style.color = this.currentCategory.color;
-            numberDisplayEl.style.borderColor = this.currentCategory.color;
-            numberDisplayEl.style.boxShadow = `0 0 15px ${this.currentCategory.color}66`;
-
-            // Update category indicator
-            categoryNameEl.textContent = `${this.currentCategory.description} (x${this.currentCategory.bonus})`;
-            categoryIndicatorEl.style.borderColor = this.currentCategory.color;
-            categoryIndicatorEl.style.backgroundColor = this.currentCategory.color + '22';
-            categoryNameEl.style.color = this.currentCategory.color;
-        } else {
-            numberValueEl.style.color = '#6aba9a';
-            numberDisplayEl.style.borderColor = '#6aba9a';
-            numberDisplayEl.style.boxShadow = '';
-
-            // Hide category indicator
-            categoryNameEl.textContent = 'NEUTRAL';
-            categoryIndicatorEl.style.borderColor = '#4a9a7a';
-            categoryIndicatorEl.style.backgroundColor = '#1a3a2a';
-            categoryNameEl.style.color = '#8acaaa';
-        }
-    }
 
     calculateNPS() {
         let nps = 0;
@@ -402,6 +484,15 @@ class LumonGame {
         this.automationUpgrades.forEach(upgrade => {
             nps += upgrade.baseProduction * upgrade.count;
         });
+
+        // Check if automation should be enabled
+        const totalAutomation = this.automationUpgrades.reduce((sum, u) => sum + u.count, 0);
+        this.autoSortEnabled = totalAutomation >= 3; // Enable auto-sort when you have 3+ automation upgrades
+
+        // Adjust spawn rate based on automation
+        if (totalAutomation > 0) {
+            this.spawnInterval = Math.max(1000, 3000 - (totalAutomation * 200)); // Faster spawns with more automation
+        }
 
         // Apply efficiency multipliers
         if (this.efficiencyUpgrades.find(u => u.id === 'handbook' && u.purchased)) {
@@ -663,10 +754,27 @@ class LumonGame {
 
     startGameLoop() {
         setInterval(() => {
+            const now = Date.now();
+
             // Add passive income
             const passiveGain = this.numbersPerSecond / 10;
             this.numbers += passiveGain;
             this.totalNumbersRefined += passiveGain;
+
+            // Spawn new numbers periodically
+            if (now - this.lastSpawnTime >= this.spawnInterval) {
+                this.spawnNumber();
+                this.lastSpawnTime = now;
+            }
+
+            // Auto-sort if automation is enabled
+            if (this.autoSortEnabled && this.numberQueue.length > 0) {
+                const numberToSort = this.numberQueue[0];
+                if (numberToSort.category) {
+                    this.selectedNumber = numberToSort;
+                    this.sortNumber(numberToSort.category);
+                }
+            }
 
             this.updateUI();
             this.checkMilestones();
@@ -677,7 +785,16 @@ class LumonGame {
         document.getElementById('numbers').textContent = this.formatNumber(this.numbers);
         document.getElementById('perSecond').textContent = this.formatNumber(this.numbersPerSecond);
         document.getElementById('level').textContent = this.level;
-        document.getElementById('clickValue').textContent = `+${this.formatNumber(this.clickPower)} par clic`;
+
+        // Update sorting stats
+        const comboEl = document.getElementById('comboCount');
+        if (comboEl) comboEl.textContent = this.combo;
+
+        const accuracyEl = document.getElementById('accuracy');
+        if (accuracyEl) accuracyEl.textContent = this.getAccuracy();
+
+        const sortSpeedEl = document.getElementById('sortSpeed');
+        if (sortSpeedEl) sortSpeedEl.textContent = this.getSortSpeed();
 
         // Update quota (percentage to next milestone)
         const nextMilestone = this.milestones.find(m => !m.reached);

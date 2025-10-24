@@ -37,23 +37,75 @@
                 </div>
 
                 <div class="clicker-area">
-                    <div id="categoryIndicator" class="category-indicator">
-                        <span id="categoryName"></span>
-                    </div>
-                    <button id="clickButton" class="click-button">
-                        <div class="number-display">
-                            <span class="number-value">47</span>
+                    <div class="work-station">
+                        <div class="station-header">
+                            <h3>Station de Raffinement</h3>
+                            <div class="stats-bar">
+                                <span>Combo: <span id="comboCount">0</span>x</span>
+                                <span>Précision: <span id="accuracy">100</span>%</span>
+                                <span>Vitesse: <span id="sortSpeed">0</span>/min</span>
+                            </div>
                         </div>
-                        <p>Raffiner un Nombre</p>
-                    </button>
-                    <p id="clickValue" class="click-value">+1 par clic</p>
-                    <div class="category-legend">
-                        <p class="legend-title">Catégories de Raffinement:</p>
-                        <div class="legend-items">
-                            <span class="legend-item" style="color: #d9534f;">■ SCARY (x2)</span>
-                            <span class="legend-item" style="color: #f0ad4e;">■ ANGRY (x1.8)</span>
-                            <span class="legend-item" style="color: #5bc0de;">■ SAD (x1.5)</span>
-                            <span class="legend-item" style="color: #5cb85c;">■ HAPPY (x1.3)</span>
+
+                        <!-- Number Queue - Numbers waiting to be sorted -->
+                        <div class="number-queue">
+                            <div class="queue-label">Nombres à raffiner:</div>
+                            <div id="numberQueue" class="queue-container">
+                                <!-- Numbers will appear here -->
+                            </div>
+                        </div>
+
+                        <!-- Sorting Bins -->
+                        <div class="sorting-bins">
+                            <div class="bin scary-bin" data-category="scary">
+                                <div class="bin-header">
+                                    <span class="bin-icon">😱</span>
+                                    <span class="bin-label">SCARY</span>
+                                </div>
+                                <div class="bin-body" data-bin="scary">
+                                    <div class="bin-multiplier">x2.0</div>
+                                </div>
+                                <div class="bin-count">Triés: <span id="scaryCount">0</span></div>
+                            </div>
+
+                            <div class="bin angry-bin" data-category="angry">
+                                <div class="bin-header">
+                                    <span class="bin-icon">😠</span>
+                                    <span class="bin-label">ANGRY</span>
+                                </div>
+                                <div class="bin-body" data-bin="angry">
+                                    <div class="bin-multiplier">x1.8</div>
+                                </div>
+                                <div class="bin-count">Triés: <span id="angryCount">0</span></div>
+                            </div>
+
+                            <div class="bin sad-bin" data-category="sad">
+                                <div class="bin-header">
+                                    <span class="bin-icon">😢</span>
+                                    <span class="bin-label">SAD</span>
+                                </div>
+                                <div class="bin-body" data-bin="sad">
+                                    <div class="bin-multiplier">x1.5</div>
+                                </div>
+                                <div class="bin-count">Triés: <span id="sadCount">0</span></div>
+                            </div>
+
+                            <div class="bin happy-bin" data-category="happy">
+                                <div class="bin-header">
+                                    <span class="bin-icon">😊</span>
+                                    <span class="bin-label">HAPPY</span>
+                                </div>
+                                <div class="bin-body" data-bin="happy">
+                                    <div class="bin-multiplier">x1.3</div>
+                                </div>
+                                <div class="bin-count">Triés: <span id="happyCount">0</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div class="instructions">
+                            <p>Cliquez sur un nombre, puis sur le bon bin pour le raffiner</p>
+                            <p class="tip">💡 Astuce: Les bonnes catégories brillent quand vous sélectionnez un nombre</p>
                         </div>
                     </div>
                 </div>
