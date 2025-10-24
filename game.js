@@ -472,6 +472,8 @@ class LumonGame {
 
             const upgradeDiv = document.createElement('div');
             upgradeDiv.className = `upgrade-item ${affordable ? 'affordable' : ''}`;
+            upgradeDiv.dataset.upgradeId = upgrade.id;
+            upgradeDiv.dataset.upgradeType = 'automation';
             upgradeDiv.innerHTML = `
                 <div class="upgrade-info">
                     <h3>${upgrade.name}</h3>
@@ -481,7 +483,7 @@ class LumonGame {
                 <div class="upgrade-details">
                     <div class="upgrade-count">Possédés: ${upgrade.count}</div>
                     <div class="upgrade-cost">${this.formatNumber(cost)}</div>
-                    <button class="upgrade-button">
+                    <button class="upgrade-button" data-upgrade-id="${upgrade.id}">
                         Acheter
                     </button>
                 </div>
@@ -505,6 +507,8 @@ class LumonGame {
 
             const upgradeDiv = document.createElement('div');
             upgradeDiv.className = `upgrade-item ${affordable ? 'affordable' : ''} ${upgrade.purchased ? 'maxed' : ''}`;
+            upgradeDiv.dataset.upgradeId = upgrade.id;
+            upgradeDiv.dataset.upgradeType = 'efficiency';
             upgradeDiv.innerHTML = `
                 <div class="upgrade-info">
                     <h3>${upgrade.name}</h3>
@@ -512,7 +516,7 @@ class LumonGame {
                 </div>
                 <div class="upgrade-details">
                     <div class="upgrade-cost">${upgrade.purchased ? 'ACHETÉ' : this.formatNumber(upgrade.cost)}</div>
-                    <button class="upgrade-button">
+                    <button class="upgrade-button" data-upgrade-id="${upgrade.id}">
                         ${upgrade.purchased ? 'Possédé' : 'Acheter'}
                     </button>
                 </div>
@@ -527,6 +531,49 @@ class LumonGame {
             }
 
             efficiencyContainer.appendChild(upgradeDiv);
+        });
+    }
+
+    updateUpgradeButtons() {
+        // Update automation upgrade buttons
+        this.automationUpgrades.forEach(upgrade => {
+            const cost = this.getUpgradeCost(upgrade);
+            const affordable = this.numbers >= cost;
+
+            const upgradeDiv = document.querySelector(`.upgrade-item[data-upgrade-type="automation"][data-upgrade-id="${upgrade.id}"]`);
+            if (upgradeDiv) {
+                const button = upgradeDiv.querySelector('button');
+                if (button) {
+                    button.disabled = !affordable;
+                }
+
+                // Update affordable class
+                if (affordable) {
+                    upgradeDiv.classList.add('affordable');
+                } else {
+                    upgradeDiv.classList.remove('affordable');
+                }
+            }
+        });
+
+        // Update efficiency upgrade buttons
+        this.efficiencyUpgrades.forEach(upgrade => {
+            const affordable = this.numbers >= upgrade.cost && !upgrade.purchased;
+
+            const upgradeDiv = document.querySelector(`.upgrade-item[data-upgrade-type="efficiency"][data-upgrade-id="${upgrade.id}"]`);
+            if (upgradeDiv) {
+                const button = upgradeDiv.querySelector('button');
+                if (button) {
+                    button.disabled = !affordable;
+                }
+
+                // Update affordable class
+                if (affordable) {
+                    upgradeDiv.classList.add('affordable');
+                } else {
+                    upgradeDiv.classList.remove('affordable');
+                }
+            }
         });
     }
 
@@ -648,6 +695,9 @@ class LumonGame {
 
         const prestigeButton = document.getElementById('prestigeButton');
         prestigeButton.disabled = this.totalNumbersRefined < 1000000;
+
+        // Update upgrade buttons state
+        this.updateUpgradeButtons();
     }
 
     formatNumber(num) {
