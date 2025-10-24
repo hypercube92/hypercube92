@@ -5,145 +5,194 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lumon Industries - Macrodata Refinement</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <h1>LUMON INDUSTRIES</h1>
-                <p class="subtitle">Macrodata Refinement Division</p>
+    <div class="game-container">
+        <!-- Left Sidebar - Stats & Info -->
+        <aside class="left-panel">
+            <div class="logo-section">
+                <h1>LUMON</h1>
+                <p class="subtitle">MDR Division</p>
             </div>
-            <div class="employee-info">
-                <p>Employee: <span id="employeeName">Innie</span></p>
-                <p>Quota: <span id="quota">0%</span></p>
-            </div>
-        </header>
 
-        <main>
-            <div class="game-area">
-                <div class="stats-panel">
-                    <div class="stat-item">
-                        <h3>Nombres Raffinés</h3>
-                        <p id="numbers" class="big-number">0</p>
-                    </div>
-                    <div class="stat-item">
-                        <h3>Par Seconde</h3>
-                        <p id="perSecond" class="medium-number">0</p>
-                    </div>
-                    <div class="stat-item">
-                        <h3>Niveau Employé</h3>
-                        <p id="level" class="medium-number">1</p>
+            <div class="stats-section">
+                <div class="stat-card primary">
+                    <span class="stat-icon">💎</span>
+                    <div class="stat-info">
+                        <label>Nombres Raffinés</label>
+                        <span id="numbers" class="stat-value">0</span>
                     </div>
                 </div>
 
-                <div class="clicker-area">
-                    <div class="work-station">
-                        <div class="station-header">
-                            <h3>Station de Raffinement</h3>
-                            <div class="stats-bar">
-                                <span>Combo: <span id="comboCount">0</span>x</span>
-                                <span>Précision: <span id="accuracy">100</span>%</span>
-                                <span>Vitesse: <span id="sortSpeed">0</span>/min</span>
-                            </div>
-                        </div>
-
-                        <!-- Number Queue - Numbers waiting to be sorted -->
-                        <div class="number-queue">
-                            <div class="queue-label">Nombres à raffiner:</div>
-                            <div id="numberQueue" class="queue-container">
-                                <!-- Numbers will appear here -->
-                            </div>
-                        </div>
-
-                        <!-- Sorting Bins -->
-                        <div class="sorting-bins">
-                            <div class="bin scary-bin" data-category="scary">
-                                <div class="bin-header">
-                                    <span class="bin-icon">😱</span>
-                                    <span class="bin-label">SCARY</span>
-                                </div>
-                                <div class="bin-body" data-bin="scary">
-                                    <div class="bin-multiplier">x2.0</div>
-                                </div>
-                                <div class="bin-count">Triés: <span id="scaryCount">0</span></div>
-                            </div>
-
-                            <div class="bin angry-bin" data-category="angry">
-                                <div class="bin-header">
-                                    <span class="bin-icon">😠</span>
-                                    <span class="bin-label">ANGRY</span>
-                                </div>
-                                <div class="bin-body" data-bin="angry">
-                                    <div class="bin-multiplier">x1.8</div>
-                                </div>
-                                <div class="bin-count">Triés: <span id="angryCount">0</span></div>
-                            </div>
-
-                            <div class="bin sad-bin" data-category="sad">
-                                <div class="bin-header">
-                                    <span class="bin-icon">😢</span>
-                                    <span class="bin-label">SAD</span>
-                                </div>
-                                <div class="bin-body" data-bin="sad">
-                                    <div class="bin-multiplier">x1.5</div>
-                                </div>
-                                <div class="bin-count">Triés: <span id="sadCount">0</span></div>
-                            </div>
-
-                            <div class="bin happy-bin" data-category="happy">
-                                <div class="bin-header">
-                                    <span class="bin-icon">😊</span>
-                                    <span class="bin-label">HAPPY</span>
-                                </div>
-                                <div class="bin-body" data-bin="happy">
-                                    <div class="bin-multiplier">x1.3</div>
-                                </div>
-                                <div class="bin-count">Triés: <span id="happyCount">0</span></div>
-                            </div>
-                        </div>
-
-                        <!-- Instructions -->
-                        <div class="instructions">
-                            <p>Cliquez sur un nombre, puis sur le bon bin pour le raffiner</p>
-                            <p class="tip">💡 Astuce: Les bonnes catégories brillent quand vous sélectionnez un nombre</p>
-                        </div>
+                <div class="stat-card">
+                    <span class="stat-icon">⚡</span>
+                    <div class="stat-info">
+                        <label>Par Seconde</label>
+                        <span id="perSecond" class="stat-value">0</span>
                     </div>
                 </div>
 
-                <div class="rewards-area">
-                    <div id="rewardMessage" class="reward-message hidden"></div>
+                <div class="stat-card">
+                    <span class="stat-icon">🎯</span>
+                    <div class="stat-info">
+                        <label>Précision</label>
+                        <span id="accuracy" class="stat-value">100%</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-icon">🔥</span>
+                    <div class="stat-info">
+                        <label>Combo</label>
+                        <span id="comboCount" class="stat-value">0x</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-icon">⭐</span>
+                    <div class="stat-info">
+                        <label>Niveau</label>
+                        <span id="level" class="stat-value">1</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-icon">📊</span>
+                    <div class="stat-info">
+                        <label>Quota</label>
+                        <span id="quota" class="stat-value">0%</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="upgrades-container">
-                <h2>Améliorations</h2>
-                <div class="tabs">
-                    <button class="tab active" data-tab="automation">Automatisation</button>
-                    <button class="tab" data-tab="efficiency">Efficacité</button>
-                    <button class="tab" data-tab="prestige">Prestige</button>
+            <div class="category-stats">
+                <h3>📈 Statistiques de Tri</h3>
+                <div class="category-item scary">
+                    <span class="cat-icon">😱</span>
+                    <span class="cat-label">Scary</span>
+                    <span id="scaryCount" class="cat-count">0</span>
                 </div>
-
-                <div id="automation" class="upgrades-list tab-content active">
-                    <!-- Upgrades will be generated by JS -->
+                <div class="category-item angry">
+                    <span class="cat-icon">😠</span>
+                    <span class="cat-label">Angry</span>
+                    <span id="angryCount" class="cat-count">0</span>
                 </div>
-
-                <div id="efficiency" class="upgrades-list tab-content">
-                    <!-- Efficiency upgrades will be generated by JS -->
+                <div class="category-item sad">
+                    <span class="cat-icon">😢</span>
+                    <span class="cat-label">Sad</span>
+                    <span id="sadCount" class="cat-count">0</span>
                 </div>
+                <div class="category-item happy">
+                    <span class="cat-icon">😊</span>
+                    <span class="cat-label">Happy</span>
+                    <span id="happyCount" class="cat-count">0</span>
+                </div>
+            </div>
 
-                <div id="prestige" class="upgrades-list tab-content">
-                    <div class="prestige-panel">
-                        <h3>Severance Reset</h3>
-                        <p>Réinitialisez votre progression pour obtenir des Jetons de Mérite permanents.</p>
-                        <p class="prestige-description">"Your Outie has chosen this path. Trust in Kier's wisdom."</p>
-                        <p>Jetons actuels: <span id="meritTokens">0</span></p>
-                        <p>Jetons après reset: <span id="potentialTokens">0</span></p>
-                        <p class="prestige-bonus">+10% production par jeton</p>
-                        <button id="prestigeButton" class="prestige-button">Subir la Severance</button>
+            <button id="saveButton" class="save-btn">💾 Sauvegarder</button>
+        </aside>
+
+        <!-- Center - Game Canvas -->
+        <main class="center-panel">
+            <div class="canvas-header">
+                <h2>🔬 Station de Raffinement</h2>
+                <div class="header-info">
+                    <span class="info-badge">⚡ Auto-Tri: <span id="autoStatus">OFF</span></span>
+                    <span class="info-badge">🎲 Spawn: <span id="spawnRate">3.0s</span></span>
+                </div>
+            </div>
+
+            <div class="game-canvas-container">
+                <canvas id="gameCanvas"></canvas>
+                <div class="canvas-overlay">
+                    <div class="instruction-popup">
+                        <p>🖱️ Cliquez sur un nombre puis sur le bon bin !</p>
                     </div>
-                    <div class="kier-principles">
-                        <h3>Les Neuf Principes de Kier Eagan</h3>
-                        <ol id="principlesList">
+                </div>
+            </div>
+
+            <div class="bins-container">
+                <div class="bin scary-bin" data-category="scary">
+                    <div class="bin-glow"></div>
+                    <span class="bin-icon">😱</span>
+                    <span class="bin-label">SCARY</span>
+                    <span class="bin-multiplier">×2.0</span>
+                </div>
+
+                <div class="bin angry-bin" data-category="angry">
+                    <div class="bin-glow"></div>
+                    <span class="bin-icon">😠</span>
+                    <span class="bin-label">ANGRY</span>
+                    <span class="bin-multiplier">×1.8</span>
+                </div>
+
+                <div class="bin sad-bin" data-category="sad">
+                    <div class="bin-glow"></div>
+                    <span class="bin-icon">😢</span>
+                    <span class="bin-label">SAD</span>
+                    <span class="bin-multiplier">×1.5</span>
+                </div>
+
+                <div class="bin happy-bin" data-category="happy">
+                    <div class="bin-glow"></div>
+                    <span class="bin-icon">😊</span>
+                    <span class="bin-label">HAPPY</span>
+                    <span class="bin-multiplier">×1.3</span>
+                </div>
+            </div>
+
+            <div id="rewardMessage" class="reward-toast"></div>
+        </main>
+
+        <!-- Right Sidebar - Shop -->
+        <aside class="right-panel">
+            <div class="shop-header">
+                <h2>🛒 Améliorations</h2>
+                <div class="shop-tabs">
+                    <button class="tab-btn active" data-tab="automation">⚙️</button>
+                    <button class="tab-btn" data-tab="efficiency">⚡</button>
+                    <button class="tab-btn" data-tab="prestige">👑</button>
+                </div>
+            </div>
+
+            <div class="shop-content">
+                <div id="automation" class="shop-tab active">
+                    <p class="tab-description">Automatise le tri des nombres</p>
+                    <div id="automationList" class="shop-list"></div>
+                </div>
+
+                <div id="efficiency" class="shop-tab">
+                    <p class="tab-description">Améliore ta performance</p>
+                    <div id="efficiencyList" class="shop-list"></div>
+                </div>
+
+                <div id="prestige" class="shop-tab">
+                    <div class="prestige-card">
+                        <h3>🧠 Severance Reset</h3>
+                        <p class="prestige-desc">Réinitialisez votre progression pour des bonus permanents</p>
+                        <div class="prestige-stats">
+                            <div class="prestige-stat">
+                                <span>Jetons actuels:</span>
+                                <strong id="meritTokens">0</strong>
+                            </div>
+                            <div class="prestige-stat">
+                                <span>Jetons après reset:</span>
+                                <strong id="potentialTokens">0</strong>
+                            </div>
+                            <div class="prestige-stat">
+                                <span>Bonus:</span>
+                                <strong>+10% par jeton</strong>
+                            </div>
+                        </div>
+                        <button id="prestigeButton" class="prestige-btn" disabled>
+                            🔄 Subir la Severance
+                        </button>
+                    </div>
+
+                    <div class="kier-card">
+                        <h4>📜 Les 9 Principes de Kier</h4>
+                        <ol class="principles-list">
                             <li>Travail et Tempérance</li>
                             <li>Calme et Compassion</li>
                             <li>Alimentation et Fraternité</li>
@@ -154,25 +203,13 @@
                             <li>Intégrité et Innovation</li>
                             <li>Persévérance et Unité</li>
                         </ol>
-                        <p class="kier-quote">"In waking, a man is his own master. In sleep, he is the pupil of Kier."</p>
                     </div>
                 </div>
             </div>
-        </main>
-
-        <footer>
-            <div class="footer-content">
-                <div class="lumon-info">
-                    <p class="lumon-motto">"We are mysterious and important."</p>
-                    <p class="lumon-subtext">Lumon Industries © Fondée par Kier Eagan</p>
-                    <p class="department-info">Macrodata Refinement Division - Severed Floor</p>
-                </div>
-                <button id="saveButton" class="save-button">Sauvegarder</button>
-            </div>
-        </footer>
+        </aside>
     </div>
 
-    <div id="notification" class="notification hidden"></div>
+    <div id="notification" class="notification"></div>
 
     <script src="game.js"></script>
 </body>
