@@ -35,7 +35,7 @@ class LumonMDRGame {
 
         // ===== SCAN MECHANICS =====
         this.scanSpeed = 2000;
-        this.scanRadius = 35; // REDUCED - fits ~1 number
+        this.scanRadius = 25; // VERY SMALL - barely covers 1 number
         this.scanZoneLevel = 1;
 
         // ===== CLUSTER MECHANICS =====
@@ -1167,7 +1167,7 @@ class LumonMDRGame {
 
         this.activePower = 1;
         this.scanSpeed = 2000;
-        this.scanRadius = 35;
+        this.scanRadius = 25;
         this.scanZoneLevel = 1;
         this.clusterSize = 1;
         this.respawnTime = 1500;
@@ -1276,13 +1276,7 @@ class LumonMDRGame {
                 this.ctx.fillText('[???]', 0, 0);
 
             } else if (cell.state === 'scanning') {
-                // SCANNING: Show [???] with progress
-                this.ctx.fillStyle = '#00ff41';
-                this.ctx.font = 'bold 13px "IBM Plex Mono", monospace';
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.fillText('[???]', 0, 0);
-
+                // SCANNING: Show progress circle and % (NO [???] to avoid confusion)
                 // Progress circle
                 this.ctx.strokeStyle = '#00ff41';
                 this.ctx.lineWidth = 3;
@@ -1292,7 +1286,9 @@ class LumonMDRGame {
 
                 // Progress %
                 this.ctx.fillStyle = '#00ff41';
-                this.ctx.font = 'bold 8px "IBM Plex Mono", monospace';
+                this.ctx.font = 'bold 12px "IBM Plex Mono", monospace';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
                 this.ctx.fillText(Math.floor(cell.scanProgress * 100) + '%', 0, 0);
 
             } else if (cell.state === 'identified') {
@@ -1360,6 +1356,54 @@ class LumonMDRGame {
 
         document.getElementById('severanceBtn').disabled = this.dataPoints < 100000;
         document.getElementById('freeTime').textContent = this.formatNumber(this.freeTime, 1);
+
+        // Update shop button states continuously
+        this.updateShopButtons();
+    }
+
+    updateShopButtons() {
+        // Update department items
+        const departmentList = document.getElementById('departmentList');
+        if (departmentList) {
+            const items = departmentList.querySelectorAll('.shop-item');
+            items.forEach((item, index) => {
+                if (index < this.departmentItems.length) {
+                    const deptItem = this.departmentItems[index];
+                    const cost = this.getUpgradeCost(deptItem);
+                    const affordable = this.dataPoints >= cost;
+                    const btn = item.querySelector('button');
+                    if (btn) {
+                        btn.disabled = !affordable;
+                        item.classList.toggle('affordable', affordable);
+                    }
+                }
+            });
+        }
+
+        // Update upgrades
+        this.updateUpgradeButtons('activeUpgradesList', this.activeUpgrades);
+        this.updateUpgradeButtons('synergyUpgradesList', this.synergyUpgrades);
+        this.updateUpgradeButtons('techTree', this.techTree);
+    }
+
+    updateUpgradeButtons(containerId, upgrades) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const items = container.querySelectorAll('.shop-item');
+        const visibleUpgrades = upgrades.filter(u => !u.purchased);
+
+        items.forEach((item, index) => {
+            if (index < visibleUpgrades.length) {
+                const upgrade = visibleUpgrades[index];
+                const affordable = this.dataPoints >= upgrade.cost;
+                const btn = item.querySelector('button');
+                if (btn) {
+                    btn.disabled = !affordable;
+                    item.classList.toggle('affordable', affordable);
+                }
+            }
+        });
     }
 
     initializeUI() {
