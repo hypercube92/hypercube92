@@ -3,213 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumon Industries - Macrodata Refinement</title>
+    <title>Lumon Industries - MDR Terminal</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 </head>
 <body>
-    <div class="game-container">
-        <!-- Left Sidebar - Stats & Info -->
-        <aside class="left-panel">
-            <div class="logo-section">
-                <h1>LUMON</h1>
-                <p class="subtitle">MDR Division</p>
+    <div class="game-wrapper">
+        <!-- TOP BAR - Stats principale -->
+        <header class="top-bar">
+            <div class="company-logo">
+                <h1>LUMON INDUSTRIES</h1>
+                <span class="division">Macrodata Refinement Division</span>
             </div>
 
-            <div class="stats-section">
-                <div class="stat-card primary">
+            <div class="main-stats">
+                <div class="stat-display primary">
                     <span class="stat-icon">💎</span>
                     <div class="stat-info">
-                        <label>Nombres Raffinés</label>
-                        <span id="numbers" class="stat-value">0</span>
+                        <label>Data Points</label>
+                        <span id="dataPoints" class="stat-value">0</span>
                     </div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-display">
                     <span class="stat-icon">⚡</span>
                     <div class="stat-info">
-                        <label>Par Seconde</label>
-                        <span id="perSecond" class="stat-value">0</span>
+                        <label>Passive Generation</label>
+                        <span id="dpPerSec" class="stat-value">0/sec</span>
                     </div>
                 </div>
 
-                <div class="stat-card">
-                    <span class="stat-icon">🎯</span>
+                <div class="stat-display">
+                    <span class="stat-icon">👆</span>
                     <div class="stat-info">
-                        <label>Précision</label>
-                        <span id="accuracy" class="stat-value">100%</span>
+                        <label>Active Power</label>
+                        <span id="activePower" class="stat-value">1/refine</span>
                     </div>
                 </div>
 
-                <div class="stat-card">
-                    <span class="stat-icon">🔥</span>
+                <div class="stat-display prestige">
+                    <span class="stat-icon">🧠</span>
                     <div class="stat-info">
-                        <label>Combo</label>
-                        <span id="comboCount" class="stat-value">0x</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <span class="stat-icon">⭐</span>
-                    <div class="stat-info">
-                        <label>Niveau</label>
-                        <span id="level" class="stat-value">1</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <span class="stat-icon">📊</span>
-                    <div class="stat-info">
-                        <label>Quota</label>
-                        <span id="quota" class="stat-value">0%</span>
+                        <label>Conformity Points</label>
+                        <span id="conformityPoints" class="stat-value">0</span>
                     </div>
                 </div>
             </div>
 
-            <div class="category-stats">
-                <h3>📈 Statistiques de Tri</h3>
-                <div class="category-item scary">
-                    <span class="cat-icon">😱</span>
-                    <span class="cat-label">Scary</span>
-                    <span id="scaryCount" class="cat-count">0</span>
-                </div>
-                <div class="category-item angry">
-                    <span class="cat-icon">😠</span>
-                    <span class="cat-label">Angry</span>
-                    <span id="angryCount" class="cat-count">0</span>
-                </div>
-                <div class="category-item sad">
-                    <span class="cat-icon">😢</span>
-                    <span class="cat-label">Sad</span>
-                    <span id="sadCount" class="cat-count">0</span>
-                </div>
-                <div class="category-item happy">
-                    <span class="cat-icon">😊</span>
-                    <span class="cat-label">Happy</span>
-                    <span id="happyCount" class="cat-count">0</span>
-                </div>
+            <div class="world-switcher">
+                <button class="world-btn active" data-world="innie">
+                    <span class="world-icon">🏢</span>
+                    <span>INNIE</span>
+                </button>
+                <button class="world-btn" data-world="outie">
+                    <span class="world-icon">🏠</span>
+                    <span>OUTIE</span>
+                </button>
             </div>
+        </header>
 
-            <button id="saveButton" class="save-btn">💾 Sauvegarder</button>
-        </aside>
-
-        <!-- Center - Game Canvas -->
-        <main class="center-panel">
-            <div class="canvas-header">
-                <h2>🔬 Station de Raffinement</h2>
-                <div class="header-info">
-                    <span class="info-badge">⚡ Auto-Tri: <span id="autoStatus">OFF</span></span>
-                    <span class="info-badge">🎲 Spawn: <span id="spawnRate">3.0s</span></span>
+        <!-- MAIN GAME AREA -->
+        <div class="game-container">
+            <!-- LEFT SIDEBAR - Navigation & Info -->
+            <aside class="left-sidebar">
+                <div class="quota-tracker">
+                    <h3>📊 Quota Progress</h3>
+                    <div class="quota-bar">
+                        <div id="quotaFill" class="quota-fill" style="width: 0%"></div>
+                    </div>
+                    <p id="quotaText" class="quota-text">0 / 1,000</p>
                 </div>
-            </div>
 
-            <div class="game-canvas-container">
-                <canvas id="gameCanvas"></canvas>
-                <div class="canvas-overlay">
-                    <div class="instruction-popup">
-                        <p>🖱️ Cliquez sur un nombre puis sur le bon bin !</p>
+                <div class="stats-panel">
+                    <h3>📈 Statistics</h3>
+                    <div class="stat-row">
+                        <span>Scan Speed:</span>
+                        <span id="scanSpeed">1.5s</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Identifiers:</span>
+                        <span id="identifierCount">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Sorters:</span>
+                        <span id="sorterCount">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Macros:</span>
+                        <span id="macroCount">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Accuracy:</span>
+                        <span id="accuracy">100%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Total Refined:</span>
+                        <span id="totalRefined">0</span>
                     </div>
                 </div>
-            </div>
 
-            <div class="bins-container">
-                <div class="bin scary-bin" data-category="scary">
-                    <div class="bin-glow"></div>
-                    <span class="bin-icon">😱</span>
-                    <span class="bin-label">SCARY</span>
-                    <span class="bin-multiplier">×2.0</span>
+                <div class="category-stats">
+                    <h3>🎯 Category Breakdown</h3>
+                    <div class="category-item woe">
+                        <span class="cat-label">WOE</span>
+                        <span id="woeCount" class="cat-count">0</span>
+                    </div>
+                    <div class="category-item frolic">
+                        <span class="cat-label">FROLIC</span>
+                        <span id="frolicCount" class="cat-count">0</span>
+                    </div>
+                    <div class="category-item dread">
+                        <span class="cat-label">DREAD</span>
+                        <span id="dreadCount" class="cat-count">0</span>
+                    </div>
+                    <div class="category-item malice">
+                        <span class="cat-label">MALICE</span>
+                        <span id="maliceCount" class="cat-count">0</span>
+                    </div>
                 </div>
 
-                <div class="bin angry-bin" data-category="angry">
-                    <div class="bin-glow"></div>
-                    <span class="bin-icon">😠</span>
-                    <span class="bin-label">ANGRY</span>
-                    <span class="bin-multiplier">×1.8</span>
+                <button id="severanceBtn" class="severance-btn" disabled>
+                    🧠 SEVERANCE RESET
+                </button>
+            </aside>
+
+            <!-- CENTER - MDR TERMINAL -->
+            <main class="terminal-container">
+                <div class="terminal-header">
+                    <span class="terminal-title">⚡ MDR TERMINAL v2.47</span>
+                    <div class="terminal-status">
+                        <span id="terminalLoad" class="load-indicator">Load: 0/50</span>
+                        <span id="terminalStatus" class="status-ok">OPERATIONAL</span>
+                    </div>
                 </div>
 
-                <div class="bin sad-bin" data-category="sad">
-                    <div class="bin-glow"></div>
-                    <span class="bin-icon">😢</span>
-                    <span class="bin-label">SAD</span>
-                    <span class="bin-multiplier">×1.5</span>
+                <div class="terminal-screen">
+                    <canvas id="terminalCanvas"></canvas>
+                    <div class="scan-overlay" id="scanOverlay"></div>
                 </div>
 
-                <div class="bin happy-bin" data-category="happy">
-                    <div class="bin-glow"></div>
-                    <span class="bin-icon">😊</span>
-                    <span class="bin-label">HAPPY</span>
-                    <span class="bin-multiplier">×1.3</span>
-                </div>
-            </div>
-
-            <div id="rewardMessage" class="reward-toast"></div>
-        </main>
-
-        <!-- Right Sidebar - Shop -->
-        <aside class="right-panel">
-            <div class="shop-header">
-                <h2>🛒 Améliorations</h2>
-                <div class="shop-tabs">
-                    <button class="tab-btn active" data-tab="automation">⚙️</button>
-                    <button class="tab-btn" data-tab="efficiency">⚡</button>
-                    <button class="tab-btn" data-tab="prestige">👑</button>
-                </div>
-            </div>
-
-            <div class="shop-content">
-                <div id="automation" class="shop-tab active">
-                    <p class="tab-description">Automatise le tri des nombres</p>
-                    <div id="automationList" class="shop-list"></div>
-                </div>
-
-                <div id="efficiency" class="shop-tab">
-                    <p class="tab-description">Améliore ta performance</p>
-                    <div id="efficiencyList" class="shop-list"></div>
-                </div>
-
-                <div id="prestige" class="shop-tab">
-                    <div class="prestige-card">
-                        <h3>🧠 Severance Reset</h3>
-                        <p class="prestige-desc">Réinitialisez votre progression pour des bonus permanents</p>
-                        <div class="prestige-stats">
-                            <div class="prestige-stat">
-                                <span>Jetons actuels:</span>
-                                <strong id="meritTokens">0</strong>
-                            </div>
-                            <div class="prestige-stat">
-                                <span>Jetons après reset:</span>
-                                <strong id="potentialTokens">0</strong>
-                            </div>
-                            <div class="prestige-stat">
-                                <span>Bonus:</span>
-                                <strong>+10% par jeton</strong>
-                            </div>
+                <div class="bins-area">
+                    <div class="bin woe-bin" data-category="woe">
+                        <div class="bin-glow"></div>
+                        <div class="bin-header">WOE</div>
+                        <div class="bin-body" data-drop="woe">
+                            <span class="bin-multiplier">×1.5</span>
                         </div>
-                        <button id="prestigeButton" class="prestige-btn" disabled>
-                            🔄 Subir la Severance
+                    </div>
+
+                    <div class="bin frolic-bin" data-category="frolic">
+                        <div class="bin-glow"></div>
+                        <div class="bin-header">FROLIC</div>
+                        <div class="bin-body" data-drop="frolic">
+                            <span class="bin-multiplier">×1.3</span>
+                        </div>
+                    </div>
+
+                    <div class="bin dread-bin" data-category="dread">
+                        <div class="bin-glow"></div>
+                        <div class="bin-header">DREAD</div>
+                        <div class="bin-body" data-drop="dread">
+                            <span class="bin-multiplier">×2.0</span>
+                        </div>
+                    </div>
+
+                    <div class="bin malice-bin" data-category="malice">
+                        <div class="bin-glow"></div>
+                        <div class="bin-header">MALICE</div>
+                        <div class="bin-body" data-drop="malice">
+                            <span class="bin-multiplier">×1.8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="eventPopup" class="event-popup hidden"></div>
+            </main>
+
+            <!-- RIGHT SIDEBAR - SHOP -->
+            <aside class="right-sidebar">
+                <div class="shop-header">
+                    <h2>🛒 DEPARTMENT SHOP</h2>
+                    <div class="shop-tabs">
+                        <button class="shop-tab-btn active" data-shop-tab="department">
+                            <span class="tab-icon">🏢</span>
+                            <span class="tab-label">Dept</span>
+                        </button>
+                        <button class="shop-tab-btn" data-shop-tab="upgrades">
+                            <span class="tab-icon">⚡</span>
+                            <span class="tab-label">Upgr</span>
+                        </button>
+                        <button class="shop-tab-btn" data-shop-tab="tech">
+                            <span class="tab-icon">🎨</span>
+                            <span class="tab-label">O&D</span>
                         </button>
                     </div>
+                </div>
 
-                    <div class="kier-card">
-                        <h4>📜 Les 9 Principes de Kier</h4>
-                        <ol class="principles-list">
-                            <li>Travail et Tempérance</li>
-                            <li>Calme et Compassion</li>
-                            <li>Alimentation et Fraternité</li>
-                            <li>Humilité et Dévotion</li>
-                            <li>Vigilance et Progrès</li>
-                            <li>Retenue et Modestie</li>
-                            <li>Courage et Discipline</li>
-                            <li>Intégrité et Innovation</li>
-                            <li>Persévérance et Unité</li>
-                        </ol>
+                <div class="shop-content">
+                    <!-- TAB 1: DEPARTMENT (Passive Production) -->
+                    <div id="departmentTab" class="shop-tab-content active">
+                        <p class="tab-description">Passive DP Generation</p>
+                        <div id="departmentList" class="shop-list"></div>
+                    </div>
+
+                    <!-- TAB 2: UPGRADES (Active & Synergies) -->
+                    <div id="upgradesTab" class="shop-tab-content">
+                        <p class="tab-description">Boosts & Synergies</p>
+                        <div class="upgrade-categories">
+                            <h4>👆 Active Refining</h4>
+                            <div id="activeUpgradesList" class="shop-list"></div>
+
+                            <h4>🔄 Department Synergies</h4>
+                            <div id="synergyUpgradesList" class="shop-list"></div>
+
+                            <h4>✨ Special Combos</h4>
+                            <div id="comboUpgradesList" class="shop-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: O&D TECH TREE -->
+                    <div id="techTab" class="shop-tab-content">
+                        <p class="tab-description">Optics & Design Tech Tree</p>
+                        <div id="techTree" class="tech-tree"></div>
                     </div>
                 </div>
+            </aside>
+        </div>
+
+        <!-- OUTIE WORLD (Hidden by default) -->
+        <div id="outieWorld" class="outie-world hidden">
+            <div class="outie-header">
+                <h2>🏠 Outside World</h2>
+                <div class="free-time-counter">
+                    <span class="stat-icon">⏰</span>
+                    <span>Free Time: <span id="freeTime">0</span></span>
+                </div>
             </div>
-        </aside>
+
+            <div class="outie-activities">
+                <div class="activity-card">
+                    <h3>🍽️ Dinner at Ricken's</h3>
+                    <p>Listen to incomprehensible philosophy</p>
+                    <button class="activity-btn" data-activity="ricken">10 FT</button>
+                </div>
+
+                <div class="activity-card">
+                    <h3>🔍 Investigate Lumon</h3>
+                    <p>Search for clues about the company</p>
+                    <button class="activity-btn" data-activity="investigate">50 FT</button>
+                </div>
+
+                <div class="activity-card">
+                    <h3>💑 Go on a Date</h3>
+                    <p>Try to maintain relationships</p>
+                    <button class="activity-btn" data-activity="date">25 FT</button>
+                </div>
+            </div>
+
+            <div class="outie-perks">
+                <h3>Permanent Bonuses from Outie Life:</h3>
+                <div id="outiePerksList"></div>
+            </div>
+        </div>
     </div>
 
     <div id="notification" class="notification"></div>
+    <div id="toast" class="toast"></div>
 
     <script src="game.js"></script>
 </body>
