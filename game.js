@@ -1,6 +1,6 @@
 // ==================================================
-// LUMON INDUSTRIES - MDR TERMINAL v2.47
-// Macrodata Refinement Simulation
+// LUMON INDUSTRIES - MDR TERMINAL v3.0
+// Macrodata Refinement Simulation - Grid System
 // ==================================================
 
 class LumonMDRGame {
@@ -11,37 +11,45 @@ class LumonMDRGame {
         this.freeTime = 0;
 
         // ===== PASSIVE vs ACTIVE GENERATION =====
-        this.passiveGeneration = 0; // DP/sec from buildings
-        this.activePower = 1; // DP per manual refine
+        this.passiveGeneration = 0;
+        this.activePower = 1;
 
         // ===== REFINING STATS =====
-        this.scanSpeed = 1500; // ms to scan a number
         this.totalRefined = 0;
         this.correctSorts = 0;
         this.incorrectSorts = 0;
 
-        // ===== CATEGORY COUNTS =====
-        this.categoryStats = {
-            woe: 0,
-            frolic: 0,
-            dread: 0,
-            malice: 0
-        };
+        // ===== GRID SYSTEM =====
+        this.gridCols = 10;
+        this.gridRows = 20;
+        this.grid = []; // Array of numbers at each position
+        this.cellWidth = 0;
+        this.cellHeight = 0;
 
-        // ===== QUOTA SYSTEM =====
-        this.currentQuota = 1000;
-        this.quotaProgress = 0;
-        this.quotaLevel = 1;
+        // ===== SCAN MECHANICS =====
+        this.scanSpeed = 1500; // ms to scan one number
+        this.scanRadius = 60; // pixels - zone d'effet du curseur
+        this.scanZoneLevel = 1; // upgrade level
 
-        // ===== AUTOMATION COUNTS =====
-        this.identifierCount = 0; // Auto-scan only
-        this.sorterCount = 0; // Auto-sort only (if number identified)
-        this.macroCount = 0; // Auto-scan AND auto-sort
+        // ===== CLUSTER MECHANICS =====
+        this.clusterSize = 1; // combien de numéros adjacents on peut prendre
+        this.selectedCluster = []; // numéros actuellement sélectionnés
+        this.isDragging = false;
 
-        // ===== WORLD STATE =====
-        this.currentWorld = 'innie'; // 'innie' or 'outie'
+        // ===== RESPAWN MECHANICS =====
+        this.respawnTime = 2000; // ms avant qu'un nouveau numéro apparaisse
+        this.emptySlots = []; // positions vides avec timestamp
+        this.lastRespawnCheck = Date.now();
 
-        // ===== NUMBER CATEGORIES (WOE/FROLIC/DREAD/MALICE) =====
+        // ===== COMBO SYSTEM =====
+        this.currentCombo = 0;
+        this.comboMultiplier = 1;
+        this.comboTimer = null;
+        this.lastDropCategory = null;
+        this.lastDropTime = 0;
+
+        // ===== CATEGORY SYSTEM =====
+        this.categoryStats = { woe: 0, frolic: 0, dread: 0, malice: 0 };
         this.categories = {
             woe: {
                 ranges: [[1, 20], [666, 670]],
@@ -69,27 +77,26 @@ class LumonMDRGame {
             }
         };
 
-        // ===== ACTIVE NUMBERS ON SCREEN =====
-        this.numbers = []; // {id, value, category, state, x, y, identified, scanning, scanProgress}
-        this.nextNumberId = 1;
-        this.maxNumbers = 5;
-        this.spawnInterval = 3000; // 3 seconds
-        this.lastSpawn = Date.now();
+        // ===== QUOTA SYSTEM =====
+        this.currentQuota = 1000;
+        this.quotaProgress = 0;
+        this.quotaLevel = 1;
 
-        // ===== SCANNING STATE =====
-        this.currentScanning = null; // {numberId, startTime}
-        this.hoveredNumber = null;
+        // ===== AUTOMATION COUNTS =====
+        this.identifierCount = 0;
+        this.sorterCount = 0;
+        this.macroCount = 0;
 
-        // ===== DRAGGING STATE =====
-        this.draggedNumber = null;
+        // ===== WORLD STATE =====
+        this.currentWorld = 'innie';
 
-        // ===== DEPARTMENT ITEMS (Passive Generation) =====
+        // ===== DEPARTMENT ITEMS =====
         this.departmentItems = [
             {
                 id: 'stagiaire',
                 icon: '👤',
                 name: 'Stagiaire',
-                description: 'Nouvel employé en formation',
+                description: 'Génère 0.1 DP/sec',
                 baseCost: 10,
                 baseProduction: 0.1,
                 count: 0,
@@ -98,8 +105,8 @@ class LumonMDRGame {
             {
                 id: 'identifier',
                 icon: '🔍',
-                name: 'Identifier Automatique',
-                description: 'Scanne les données automatiquement',
+                name: 'Identifier Auto',
+                description: 'Scanne 1 numéro toutes les 2 sec',
                 baseCost: 50,
                 baseProduction: 0.5,
                 count: 0,
@@ -109,8 +116,8 @@ class LumonMDRGame {
             {
                 id: 'sorter',
                 icon: '📊',
-                name: 'Sorter Automatique',
-                description: 'Trie les données identifiées',
+                name: 'Sorter Auto',
+                description: 'Trie 1 numéro identifié toutes les 3 sec',
                 baseCost: 150,
                 baseProduction: 1,
                 count: 0,
@@ -120,8 +127,8 @@ class LumonMDRGame {
             {
                 id: 'macro',
                 icon: '⚙️',
-                name: 'Macro de Raffinement',
-                description: 'Scan ET tri automatique',
+                name: 'Macro Complet',
+                description: 'Scan + Tri automatique',
                 baseCost: 500,
                 baseProduction: 3,
                 count: 0,
@@ -132,7 +139,7 @@ class LumonMDRGame {
                 id: 'coffee',
                 icon: '☕',
                 name: 'Machine à Café',
-                description: 'Booste la productivité',
+                description: 'Booste tout le département',
                 baseCost: 1000,
                 baseProduction: 5,
                 count: 0,
@@ -142,7 +149,7 @@ class LumonMDRGame {
                 id: 'irving',
                 icon: '🖥️',
                 name: 'Serveur d\'Irving',
-                description: 'Traitement parallèle des données',
+                description: 'Traitement parallèle massif',
                 baseCost: 5000,
                 baseProduction: 20,
                 count: 0,
@@ -152,7 +159,7 @@ class LumonMDRGame {
                 id: 'cobel',
                 icon: '👁️',
                 name: 'Mrs. Cobel',
-                description: 'Supervision intensive',
+                description: 'Supervision totale',
                 baseCost: 25000,
                 baseProduction: 100,
                 count: 0,
@@ -163,7 +170,7 @@ class LumonMDRGame {
         // ===== ACTIVE UPGRADES =====
         this.activeUpgrades = [
             {
-                id: 'click1',
+                id: 'power1',
                 icon: '👆',
                 name: 'Formation de Base',
                 description: 'Puissance active +1',
@@ -172,13 +179,22 @@ class LumonMDRGame {
                 effect: () => this.activePower += 1
             },
             {
-                id: 'click2',
+                id: 'power2',
                 icon: '✌️',
-                name: 'Double Pression',
-                description: 'Puissance active +2',
+                name: 'Expertise Avancée',
+                description: 'Puissance active +3',
                 cost: 500,
                 purchased: false,
-                effect: () => this.activePower += 2
+                effect: () => this.activePower += 3
+            },
+            {
+                id: 'power3',
+                icon: '💪',
+                name: 'Maîtrise Totale',
+                description: 'Puissance active +10',
+                cost: 2500,
+                purchased: false,
+                effect: () => this.activePower += 10
             },
             {
                 id: 'scan1',
@@ -197,6 +213,96 @@ class LumonMDRGame {
                 cost: 1500,
                 purchased: false,
                 effect: () => this.scanSpeed *= 0.7
+            },
+            {
+                id: 'scan3',
+                icon: '⚡⚡⚡',
+                name: 'Scan Instantané',
+                description: 'Vitesse de scan -50%',
+                cost: 8000,
+                purchased: false,
+                effect: () => this.scanSpeed *= 0.5
+            },
+            {
+                id: 'zone1',
+                icon: '🎯',
+                name: 'Zone Étendue',
+                description: 'Rayon de scan +50%',
+                cost: 400,
+                purchased: false,
+                effect: () => { this.scanRadius *= 1.5; this.scanZoneLevel++; }
+            },
+            {
+                id: 'zone2',
+                icon: '🎯🎯',
+                name: 'Zone Large',
+                description: 'Rayon de scan +100%',
+                cost: 2000,
+                purchased: false,
+                effect: () => { this.scanRadius *= 2; this.scanZoneLevel++; }
+            },
+            {
+                id: 'zone3',
+                icon: '🎯🎯🎯',
+                name: 'Zone Massive',
+                description: 'Rayon de scan +150%',
+                cost: 10000,
+                purchased: false,
+                effect: () => { this.scanRadius *= 2.5; this.scanZoneLevel++; }
+            },
+            {
+                id: 'cluster1',
+                icon: '🔗',
+                name: 'Cluster Duo',
+                description: 'Sélection adjacente: 2 numéros',
+                cost: 600,
+                purchased: false,
+                effect: () => this.clusterSize = 2
+            },
+            {
+                id: 'cluster2',
+                icon: '🔗🔗',
+                name: 'Cluster Groupe',
+                description: 'Sélection adjacente: 5 numéros',
+                cost: 3000,
+                purchased: false,
+                effect: () => this.clusterSize = 5
+            },
+            {
+                id: 'cluster3',
+                icon: '🔗🔗🔗',
+                name: 'Cluster Massif',
+                description: 'Sélection adjacente: 10 numéros',
+                cost: 15000,
+                purchased: false,
+                effect: () => this.clusterSize = 10
+            },
+            {
+                id: 'respawn1',
+                icon: '⏱️',
+                name: 'Respawn Rapide',
+                description: 'Réapparition -30%',
+                cost: 800,
+                purchased: false,
+                effect: () => this.respawnTime *= 0.7
+            },
+            {
+                id: 'respawn2',
+                icon: '⏱️⏱️',
+                name: 'Respawn Ultra',
+                description: 'Réapparition -50%',
+                cost: 4000,
+                purchased: false,
+                effect: () => this.respawnTime *= 0.5
+            },
+            {
+                id: 'respawn3',
+                icon: '⏱️⏱️⏱️',
+                name: 'Respawn Instantané',
+                description: 'Réapparition -70%',
+                cost: 20000,
+                purchased: false,
+                effect: () => this.respawnTime *= 0.3
             }
         ];
 
@@ -204,236 +310,152 @@ class LumonMDRGame {
         this.synergyUpgrades = [
             {
                 id: 'syn1',
-                icon: '🔗',
+                icon: '🌟',
                 name: 'Synergie Stagiaire',
                 description: '+10% production pour chaque Stagiaire',
                 cost: 2000,
-                purchased: false,
-                effect: () => {} // Applied in calculation
+                purchased: false
             },
             {
                 id: 'syn2',
-                icon: '🔗🔗',
+                icon: '🌟🌟',
                 name: 'Synergie Macro',
                 description: '+15% production pour chaque Macro',
                 cost: 10000,
-                purchased: false,
-                effect: () => {} // Applied in calculation
-            }
-        ];
-
-        // ===== COMBO UPGRADES =====
-        this.comboUpgrades = [
+                purchased: false
+            },
             {
                 id: 'combo1',
-                icon: '✨',
-                name: 'Bonus Précision',
-                description: 'Bonus +50% si 100% précision',
+                icon: '💥',
+                name: 'Bonus Combo x2',
+                description: 'Combo de 3+ : multiplicateur x2',
                 cost: 5000,
-                purchased: false,
-                effect: () => {} // Applied in calculation
+                purchased: false
+            },
+            {
+                id: 'combo2',
+                icon: '💥💥',
+                name: 'Bonus Combo x3',
+                description: 'Combo de 5+ : multiplicateur x3',
+                cost: 15000,
+                purchased: false
+            },
+            {
+                id: 'cluster_same',
+                icon: '🎨',
+                name: 'Clusters Colorés',
+                description: '+50% chance numéros adjacents même catégorie',
+                cost: 7000,
+                purchased: false
             }
         ];
 
-        // ===== TECH TREE (O&D) =====
+        // ===== TECH TREE =====
         this.techTree = [
             {
                 id: 'tech1',
-                icon: '🎨',
-                name: 'Design Ergonomique',
-                description: 'Interface optimisée',
+                icon: '📈',
+                name: 'Grille Étendue',
+                description: 'Plus de numéros sur la grille',
                 cost: 3000,
                 purchased: false,
-                effect: () => this.maxNumbers += 2
+                effect: () => { this.gridRows += 5; this.initializeGrid(); }
             },
             {
                 id: 'tech2',
                 icon: '🔬',
-                name: 'Analyse Avancée',
-                description: 'Détection des patterns',
+                name: 'Analyse Prédictive',
+                description: 'Révèle la catégorie avant scan',
                 cost: 8000,
-                purchased: false,
-                effect: () => {}
+                purchased: false
             }
         ];
 
-        // ===== OUTIE PERKS =====
-        this.outiePerks = [];
-
-        // ===== CANVAS & PHYSICS =====
+        // ===== CANVAS SETUP =====
         this.canvas = document.getElementById('terminalCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.resizeCanvas();
 
-        // ===== BIND EVENTS =====
+        // Mouse tracking
+        this.mouseX = 0;
+        this.mouseY = 0;
+
+        // ===== INITIALIZE =====
+        this.initializeGrid();
         this.bindEvents();
+        this.initializeUI();
+        this.renderShop();
 
         // ===== START GAME LOOP =====
         this.lastUpdate = Date.now();
         this.gameLoop();
-
-        // ===== INITIALIZE UI =====
-        this.initializeUI();
-        this.renderShop();
     }
 
-    // ===== CANVAS MANAGEMENT =====
-    resizeCanvas() {
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
-    }
+    // ===== GRID INITIALIZATION =====
+    initializeGrid() {
+        this.grid = [];
+        const totalCells = this.gridCols * this.gridRows;
 
-    // ===== EVENT BINDING =====
-    bindEvents() {
-        // Canvas events
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
+        for (let i = 0; i < totalCells; i++) {
+            const row = Math.floor(i / this.gridCols);
+            const col = i % this.gridCols;
 
-        // World switcher
-        document.querySelectorAll('.world-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchWorld(e.target.dataset.world));
-        });
+            const number = {
+                id: i,
+                gridX: col,
+                gridY: row,
+                value: null,
+                category: null,
+                state: 'empty', // 'empty', 'unidentified', 'scanning', 'identified', 'selected'
+                scanProgress: 0,
+                wiggleOffset: Math.random() * Math.PI * 2, // pour animation
+                isEmpty: true
+            };
 
-        // Shop tabs
-        document.querySelectorAll('.shop-tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchShopTab(e.target.closest('[data-shop-tab]').dataset.shopTab));
-        });
-
-        // Severance button
-        document.getElementById('severanceBtn').addEventListener('click', () => this.performSeverance());
-
-        // Window resize
-        window.addEventListener('resize', () => this.resizeCanvas());
-    }
-
-    // ===== MOUSE HANDLERS =====
-    handleMouseMove(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // Check if hovering over a number
-        let foundHover = null;
-        for (const num of this.numbers) {
-            if (num.state === 'identified') continue; // Can't scan identified numbers
-
-            const dist = Math.sqrt((mouseX - num.x) ** 2 + (mouseY - num.y) ** 2);
-            if (dist < 30) {
-                foundHover = num;
-                break;
-            }
+            this.grid.push(number);
         }
 
-        this.hoveredNumber = foundHover;
-
-        // Start or continue scanning
-        if (foundHover && foundHover.state === 'unidentified') {
-            if (!this.currentScanning || this.currentScanning.numberId !== foundHover.id) {
-                // Start new scan
-                this.currentScanning = {
-                    numberId: foundHover.id,
-                    startTime: Date.now()
-                };
-            }
-        } else {
-            // Stop scanning
-            this.currentScanning = null;
-        }
-
-        // Update drag position
-        if (this.draggedNumber) {
-            this.draggedNumber.x = mouseX;
-            this.draggedNumber.y = mouseY;
+        // Remplir 50% de la grille au départ
+        const toFill = Math.floor(totalCells * 0.5);
+        for (let i = 0; i < toFill; i++) {
+            this.spawnNumberAtRandomPosition();
         }
     }
 
-    handleMouseDown(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+    spawnNumberAtRandomPosition() {
+        const emptyCells = this.grid.filter(cell => cell.isEmpty);
+        if (emptyCells.length === 0) return;
 
-        // Check if clicking on an identified number to drag it
-        for (const num of this.numbers) {
-            if (num.state !== 'identified') continue;
-
-            const dist = Math.sqrt((mouseX - num.x) ** 2 + (mouseY - num.y) ** 2);
-            if (dist < 30) {
-                this.draggedNumber = num;
-                break;
-            }
-        }
+        const cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        this.spawnNumberAtCell(cell);
     }
 
-    handleMouseUp(e) {
-        if (!this.draggedNumber) return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // Check if dropped into a bin
-        const binTargets = document.querySelectorAll('.bin-body');
-        let droppedBin = null;
-
-        binTargets.forEach(binBody => {
-            const binRect = binBody.getBoundingClientRect();
-            const containerRect = this.canvas.parentElement.parentElement.getBoundingClientRect();
-
-            // Adjust for canvas position within container
-            if (mouseY > this.canvas.height - 100) { // Near bottom where bins are
-                const binCategory = binBody.dataset.drop;
-                droppedBin = binCategory;
-            }
-        });
-
-        // Alternative: check Y position - if near bottom, determine bin by X
-        if (mouseY > this.canvas.height - 80) {
-            const binWidth = this.canvas.width / 4;
-            const binIndex = Math.floor(mouseX / binWidth);
-            const bins = ['woe', 'frolic', 'dread', 'malice'];
-            droppedBin = bins[binIndex];
-        }
-
-        if (droppedBin) {
-            this.sortNumber(this.draggedNumber, droppedBin);
-        }
-
-        this.draggedNumber = null;
-    }
-
-    handleMouseLeave() {
-        this.currentScanning = null;
-        this.hoveredNumber = null;
-        this.draggedNumber = null;
-    }
-
-    // ===== NUMBER MANAGEMENT =====
-    spawnNumber() {
-        if (this.numbers.length >= this.maxNumbers) return;
-
-        const id = this.nextNumberId++;
-        const category = this.getRandomCategory();
+    spawnNumberAtCell(cell) {
+        const category = this.getRandomCategory(cell);
         const value = this.getRandomValueForCategory(category);
 
-        const number = {
-            id,
-            value,
-            category,
-            state: 'unidentified', // 'unidentified', 'scanning', 'identified'
-            x: Math.random() * (this.canvas.width - 100) + 50,
-            y: 50,
-            vx: (Math.random() - 0.5) * 2,
-            vy: Math.random() * 1 + 0.5,
-            scanProgress: 0
-        };
-
-        this.numbers.push(number);
+        cell.value = value;
+        cell.category = category;
+        cell.state = 'unidentified';
+        cell.isEmpty = false;
+        cell.scanProgress = 0;
     }
 
-    getRandomCategory() {
+    getRandomCategory(cell) {
+        // Check if cluster upgrade purchased
+        const clusterUpgrade = this.synergyUpgrades.find(u => u.id === 'cluster_same');
+
+        if (clusterUpgrade && clusterUpgrade.purchased && Math.random() < 0.5) {
+            // 50% chance de regarder les voisins
+            const neighbors = this.getNeighbors(cell.gridX, cell.gridY);
+            const identifiedNeighbors = neighbors.filter(n => !n.isEmpty && n.category);
+
+            if (identifiedNeighbors.length > 0) {
+                // Prendre la catégorie d'un voisin
+                return identifiedNeighbors[0].category;
+            }
+        }
+
         const cats = ['woe', 'frolic', 'dread', 'malice'];
         return cats[Math.floor(Math.random() * cats.length)];
     }
@@ -444,75 +466,364 @@ class LumonMDRGame {
         return Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
     }
 
-    identifyNumber(number) {
-        number.state = 'identified';
-        number.scanProgress = 0;
-        this.currentScanning = null;
+    // ===== CANVAS MANAGEMENT =====
+    resizeCanvas() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+
+        // Recalculate cell dimensions
+        this.cellWidth = this.canvas.width / this.gridCols;
+        this.cellHeight = this.canvas.height / this.gridRows;
     }
 
-    sortNumber(number, binCategory) {
-        const correct = number.category === binCategory;
+    // ===== EVENT BINDING =====
+    bindEvents() {
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
 
-        if (correct) {
-            this.correctSorts++;
-            const multiplier = this.categories[number.category].multiplier;
-            const reward = Math.floor(this.activePower * multiplier);
-            this.dataPoints += reward;
-            this.categoryStats[number.category]++;
-            this.totalRefined++;
-            this.quotaProgress += reward;
+        document.querySelectorAll('.world-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.switchWorld(e.target.dataset.world));
+        });
 
-            // Show feedback
-            this.showToast(`+${reward} DP - Correct!`);
-        } else {
-            this.incorrectSorts++;
-            this.showToast(`Incorrect! Perte de précision`, true);
+        document.querySelectorAll('.shop-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.switchShopTab(e.target.closest('[data-shop-tab]').dataset.shopTab));
+        });
+
+        document.getElementById('severanceBtn').addEventListener('click', () => this.performSeverance());
+
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    // ===== MOUSE HANDLERS =====
+    handleMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.mouseX = e.clientX - rect.left;
+        this.mouseY = e.clientY - rect.top;
+
+        // Scan numbers in radius
+        if (!this.isDragging) {
+            this.scanNumbersInRadius();
+        }
+    }
+
+    scanNumbersInRadius() {
+        const now = Date.now();
+
+        this.grid.forEach(cell => {
+            if (cell.isEmpty || cell.state === 'identified') return;
+
+            const cellCenterX = cell.gridX * this.cellWidth + this.cellWidth / 2;
+            const cellCenterY = cell.gridY * this.cellHeight + this.cellHeight / 2;
+
+            const dist = Math.sqrt(
+                (this.mouseX - cellCenterX) ** 2 +
+                (this.mouseY - cellCenterY) ** 2
+            );
+
+            if (dist <= this.scanRadius) {
+                // Dans la zone de scan
+                if (cell.state === 'unidentified') {
+                    cell.state = 'scanning';
+                    if (!cell.scanStartTime) {
+                        cell.scanStartTime = now;
+                    }
+                }
+
+                if (cell.state === 'scanning') {
+                    const elapsed = now - cell.scanStartTime;
+                    cell.scanProgress = Math.min(1, elapsed / this.scanSpeed);
+
+                    if (cell.scanProgress >= 1) {
+                        cell.state = 'identified';
+                        cell.scanProgress = 0;
+                        delete cell.scanStartTime;
+                    }
+                }
+            } else {
+                // Hors de la zone de scan
+                if (cell.state === 'scanning') {
+                    cell.state = 'unidentified';
+                    cell.scanProgress = 0;
+                    delete cell.scanStartTime;
+                }
+            }
+        });
+    }
+
+    handleMouseDown(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const gridX = Math.floor(mouseX / this.cellWidth);
+        const gridY = Math.floor(mouseY / this.cellHeight);
+
+        const cell = this.grid.find(c => c.gridX === gridX && c.gridY === gridY);
+
+        if (cell && !cell.isEmpty && cell.state === 'identified') {
+            // Sélectionner le cluster
+            this.selectedCluster = this.selectCluster(cell);
+            this.isDragging = true;
+
+            // Marquer comme sélectionnés
+            this.selectedCluster.forEach(c => c.state = 'selected');
+        }
+    }
+
+    selectCluster(startCell) {
+        const cluster = [startCell];
+        const visited = new Set([startCell.id]);
+        const queue = [startCell];
+
+        while (queue.length > 0 && cluster.length < this.clusterSize) {
+            const current = queue.shift();
+            const neighbors = this.getNeighbors(current.gridX, current.gridY);
+
+            for (const neighbor of neighbors) {
+                if (visited.has(neighbor.id)) continue;
+                if (neighbor.isEmpty || neighbor.state !== 'identified') continue;
+
+                visited.add(neighbor.id);
+                cluster.push(neighbor);
+                queue.push(neighbor);
+
+                if (cluster.length >= this.clusterSize) break;
+            }
         }
 
-        // Remove number
-        this.numbers = this.numbers.filter(n => n.id !== number.id);
+        return cluster;
+    }
+
+    getNeighbors(gridX, gridY) {
+        const neighbors = [];
+        const directions = [
+            [-1, 0], [1, 0], [0, -1], [0, 1], // orthogonaux
+            [-1, -1], [-1, 1], [1, -1], [1, 1] // diagonaux
+        ];
+
+        for (const [dx, dy] of directions) {
+            const nx = gridX + dx;
+            const ny = gridY + dy;
+
+            if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows) {
+                const neighbor = this.grid.find(c => c.gridX === nx && c.gridY === ny);
+                if (neighbor) neighbors.push(neighbor);
+            }
+        }
+
+        return neighbors;
+    }
+
+    handleMouseUp(e) {
+        if (!this.isDragging || this.selectedCluster.length === 0) {
+            this.isDragging = false;
+            this.selectedCluster = [];
+            return;
+        }
+
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Check if dropped on a bin
+        const binHeight = 80; // hauteur approximative des bins sous le canvas
+        const parentRect = this.canvas.parentElement.parentElement.getBoundingClientRect();
+        const absoluteY = e.clientY;
+
+        // Si on est en bas de l'écran (zone des bins)
+        if (absoluteY > parentRect.bottom - binHeight) {
+            const binWidth = parentRect.width / 4;
+            const relativeX = e.clientX - parentRect.left;
+            const binIndex = Math.floor(relativeX / binWidth);
+            const bins = ['woe', 'frolic', 'dread', 'malice'];
+            const droppedBin = bins[Math.max(0, Math.min(3, binIndex))];
+
+            if (droppedBin) {
+                this.sortCluster(this.selectedCluster, droppedBin);
+            }
+        }
+
+        // Reset selection
+        this.selectedCluster.forEach(c => {
+            if (c.state === 'selected') c.state = 'identified';
+        });
+        this.selectedCluster = [];
+        this.isDragging = false;
+    }
+
+    handleMouseLeave() {
+        if (this.isDragging) {
+            this.selectedCluster.forEach(c => {
+                if (c.state === 'selected') c.state = 'identified';
+            });
+            this.selectedCluster = [];
+            this.isDragging = false;
+        }
+    }
+
+    sortCluster(cluster, binCategory) {
+        const now = Date.now();
+
+        // Vérifier les catégories
+        const categories = cluster.map(c => c.category);
+        const allSameCategory = categories.every(cat => cat === categories[0]);
+        const correctCategory = categories[0] === binCategory;
+
+        let totalReward = 0;
+        let allCorrect = true;
+
+        cluster.forEach(cell => {
+            const correct = cell.category === binCategory;
+
+            if (correct) {
+                const multiplier = this.categories[cell.category].multiplier;
+                const reward = Math.floor(this.activePower * multiplier);
+                totalReward += reward;
+                this.categoryStats[cell.category]++;
+                this.correctSorts++;
+            } else {
+                allCorrect = false;
+                this.incorrectSorts++;
+            }
+
+            this.totalRefined++;
+
+            // Vider la cellule
+            cell.isEmpty = true;
+            cell.value = null;
+            cell.category = null;
+            cell.state = 'empty';
+            cell.scanProgress = 0;
+
+            // Ajouter à la liste de respawn
+            this.emptySlots.push({
+                cell: cell,
+                emptyTime: now
+            });
+        });
+
+        // COMBO SYSTEM
+        let comboBonus = 1;
+
+        if (allSameCategory && cluster.length >= 2) {
+            // Gérer le combo
+            const timeSinceLastDrop = now - this.lastDropTime;
+
+            if (this.lastDropCategory === categories[0] && timeSinceLastDrop < 3000) {
+                this.currentCombo++;
+            } else {
+                this.currentCombo = 1;
+            }
+
+            this.lastDropCategory = categories[0];
+            this.lastDropTime = now;
+
+            // Appliquer les bonus de combo
+            const combo2 = this.synergyUpgrades.find(u => u.id === 'combo1');
+            const combo3 = this.synergyUpgrades.find(u => u.id === 'combo2');
+
+            if (combo3 && combo3.purchased && this.currentCombo >= 5) {
+                comboBonus = 3;
+            } else if (combo2 && combo2.purchased && this.currentCombo >= 3) {
+                comboBonus = 2;
+            }
+
+            // Bonus de cluster
+            if (cluster.length >= 3) {
+                comboBonus *= (1 + (cluster.length - 3) * 0.1); // +10% par numéro au-dessus de 3
+            }
+
+            // Reset combo timer
+            if (this.comboTimer) clearTimeout(this.comboTimer);
+            this.comboTimer = setTimeout(() => {
+                this.currentCombo = 0;
+                this.lastDropCategory = null;
+            }, 3000);
+        } else {
+            // Reset combo si pas de cluster ou catégories différentes
+            this.currentCombo = 0;
+            this.lastDropCategory = null;
+        }
+
+        totalReward = Math.floor(totalReward * comboBonus);
+
+        if (allCorrect && totalReward > 0) {
+            this.dataPoints += totalReward;
+            this.quotaProgress += totalReward;
+
+            let message = `+${totalReward} DP`;
+            if (cluster.length > 1) {
+                message += ` (x${cluster.length})`;
+            }
+            if (comboBonus > 1) {
+                message += ` COMBO x${this.currentCombo}! (×${comboBonus.toFixed(1)})`;
+            }
+
+            this.showToast(message);
+        } else if (!allCorrect) {
+            this.showToast(`Incorrect! Précision réduite`, true);
+        }
+    }
+
+    // ===== RESPAWN SYSTEM =====
+    updateRespawn() {
+        const now = Date.now();
+        const toRespawn = [];
+
+        this.emptySlots = this.emptySlots.filter(slot => {
+            if (now - slot.emptyTime >= this.respawnTime) {
+                toRespawn.push(slot.cell);
+                return false;
+            }
+            return true;
+        });
+
+        toRespawn.forEach(cell => {
+            this.spawnNumberAtCell(cell);
+        });
     }
 
     // ===== AUTOMATION =====
     updateAutomation(deltaTime) {
-        // Identifiers: auto-scan unidentified numbers
+        // Identifiers
         if (this.identifierCount > 0) {
-            const unidentified = this.numbers.filter(n => n.state === 'unidentified');
-            if (unidentified.length > 0) {
-                const scanRate = this.identifierCount * 0.5; // seconds per scan
-                const toScan = Math.min(unidentified.length, Math.ceil(scanRate * deltaTime));
-                for (let i = 0; i < toScan; i++) {
-                    this.identifyNumber(unidentified[i]);
-                }
+            const scanRate = this.identifierCount * 0.5 * deltaTime;
+            const unidentified = this.grid.filter(c => !c.isEmpty && c.state === 'unidentified');
+            const toScan = Math.min(unidentified.length, Math.floor(scanRate));
+
+            for (let i = 0; i < toScan; i++) {
+                unidentified[i].state = 'identified';
             }
         }
 
-        // Sorters: auto-sort identified numbers
+        // Sorters
         if (this.sorterCount > 0) {
-            const identified = this.numbers.filter(n => n.state === 'identified');
-            if (identified.length > 0) {
-                const sortRate = this.sorterCount * 0.3; // seconds per sort
-                const toSort = Math.min(identified.length, Math.ceil(sortRate * deltaTime));
-                for (let i = 0; i < toSort; i++) {
-                    this.sortNumber(identified[i], identified[i].category);
-                }
+            const sortRate = this.sorterCount * 0.33 * deltaTime;
+            const identified = this.grid.filter(c => !c.isEmpty && c.state === 'identified');
+            const toSort = Math.min(identified.length, Math.floor(sortRate));
+
+            for (let i = 0; i < toSort; i++) {
+                const cell = identified[i];
+                this.sortCluster([cell], cell.category);
             }
         }
 
-        // Macros: auto-scan AND auto-sort
+        // Macros
         if (this.macroCount > 0) {
-            const any = this.numbers.filter(n => n.state === 'unidentified' || n.state === 'identified');
-            if (any.length > 0) {
-                const macroRate = this.macroCount * 0.8; // seconds per complete action
-                const toProcess = Math.min(any.length, Math.ceil(macroRate * deltaTime));
-                for (let i = 0; i < toProcess; i++) {
-                    const num = any[i];
-                    if (num.state === 'unidentified') {
-                        this.identifyNumber(num);
-                    }
-                    if (num.state === 'identified') {
-                        this.sortNumber(num, num.category);
-                    }
+            const macroRate = this.macroCount * 0.8 * deltaTime;
+            const any = this.grid.filter(c => !c.isEmpty);
+            const toProcess = Math.min(any.length, Math.floor(macroRate));
+
+            for (let i = 0; i < toProcess; i++) {
+                const cell = any[i];
+                if (cell.state === 'unidentified') {
+                    cell.state = 'identified';
+                }
+                if (cell.state === 'identified') {
+                    this.sortCluster([cell], cell.category);
                 }
             }
         }
@@ -520,42 +831,39 @@ class LumonMDRGame {
 
     // ===== SHOP SYSTEM =====
     renderShop() {
-        // Department tab
         const departmentList = document.getElementById('departmentList');
-        departmentList.innerHTML = '';
-        this.departmentItems.forEach(item => {
-            const cost = this.getUpgradeCost(item);
-            const affordable = this.dataPoints >= cost;
+        if (departmentList) {
+            departmentList.innerHTML = '';
+            this.departmentItems.forEach(item => {
+                const cost = this.getUpgradeCost(item);
+                const affordable = this.dataPoints >= cost;
 
-            const div = document.createElement('div');
-            div.className = `shop-item ${affordable ? 'affordable' : ''}`;
-            div.innerHTML = `
-                <div class="shop-item-header">
-                    <span class="shop-item-icon">${item.icon}</span>
-                    <div class="shop-item-title">
-                        <h4>${item.name}</h4>
-                        <span class="shop-item-count">Owned: ${item.count}</span>
+                const div = document.createElement('div');
+                div.className = `shop-item ${affordable ? 'affordable' : ''}`;
+                div.innerHTML = `
+                    <div class="shop-item-header">
+                        <span class="shop-item-icon">${item.icon}</span>
+                        <div class="shop-item-title">
+                            <h4>${item.name}</h4>
+                            <span class="shop-item-count">Owned: ${item.count}</span>
+                        </div>
                     </div>
-                </div>
-                <p class="shop-item-desc">${item.description}</p>
-                <div class="shop-item-footer">
-                    <span class="shop-item-cost">${this.formatNumber(cost)} DP</span>
-                    <button class="shop-item-btn" ${!affordable ? 'disabled' : ''}>
-                        ACHETER
-                    </button>
-                </div>
-            `;
+                    <p class="shop-item-desc">${item.description}</p>
+                    <div class="shop-item-footer">
+                        <span class="shop-item-cost">${this.formatNumber(cost)} DP</span>
+                        <button class="shop-item-btn" ${!affordable ? 'disabled' : ''}>
+                            ACHETER
+                        </button>
+                    </div>
+                `;
 
-            div.querySelector('button').addEventListener('click', () => this.purchaseDepartment(item));
-            departmentList.appendChild(div);
-        });
+                div.querySelector('button').addEventListener('click', () => this.purchaseDepartment(item));
+                departmentList.appendChild(div);
+            });
+        }
 
-        // Active upgrades tab
         this.renderUpgradesList('activeUpgradesList', this.activeUpgrades);
         this.renderUpgradesList('synergyUpgradesList', this.synergyUpgrades);
-        this.renderUpgradesList('comboUpgradesList', this.comboUpgrades);
-
-        // Tech tree tab
         this.renderUpgradesList('techTree', this.techTree);
     }
 
@@ -565,7 +873,7 @@ class LumonMDRGame {
 
         container.innerHTML = '';
         upgrades.forEach(upgrade => {
-            if (upgrade.purchased) return; // Hide purchased upgrades
+            if (upgrade.purchased) return;
 
             const affordable = this.dataPoints >= upgrade.cost;
 
@@ -599,7 +907,6 @@ class LumonMDRGame {
         this.dataPoints -= cost;
         item.count++;
 
-        // Update automation counts
         if (item.special === 'identifier') this.identifierCount++;
         if (item.special === 'sorter') this.sorterCount++;
         if (item.special === 'macro') this.macroCount++;
@@ -614,7 +921,7 @@ class LumonMDRGame {
 
         this.dataPoints -= upgrade.cost;
         upgrade.purchased = true;
-        upgrade.effect();
+        if (upgrade.effect) upgrade.effect();
 
         this.renderShop();
         this.showNotification(`Débloqué: ${upgrade.name}`);
@@ -630,25 +937,21 @@ class LumonMDRGame {
             total += item.baseProduction * item.count;
         });
 
-        // Apply synergies
-        if (this.synergyUpgrades[0]?.purchased) {
-            const stagiaireItem = this.departmentItems.find(i => i.id === 'stagiaire');
-            if (stagiaireItem) {
-                total += stagiaireItem.baseProduction * stagiaireItem.count * 0.1;
-            }
+        const syn1 = this.synergyUpgrades.find(u => u.id === 'syn1');
+        if (syn1 && syn1.purchased) {
+            const stagiaire = this.departmentItems.find(i => i.id === 'stagiaire');
+            if (stagiaire) total += stagiaire.baseProduction * stagiaire.count * 0.1;
         }
 
-        if (this.synergyUpgrades[1]?.purchased) {
-            const macroItem = this.departmentItems.find(i => i.id === 'macro');
-            if (macroItem) {
-                total += macroItem.baseProduction * macroItem.count * 0.15;
-            }
+        const syn2 = this.synergyUpgrades.find(u => u.id === 'syn2');
+        if (syn2 && syn2.purchased) {
+            const macro = this.departmentItems.find(i => i.id === 'macro');
+            if (macro) total += macro.baseProduction * macro.count * 0.15;
         }
 
         this.passiveGeneration = total;
     }
 
-    // ===== SHOP TAB SWITCHING =====
     switchShopTab(tabName) {
         document.querySelectorAll('.shop-tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.shop-tab-content').forEach(content => content.classList.remove('active'));
@@ -660,7 +963,6 @@ class LumonMDRGame {
         if (content) content.classList.add('active');
     }
 
-    // ===== WORLD SWITCHING =====
     switchWorld(world) {
         this.currentWorld = world;
 
@@ -679,7 +981,6 @@ class LumonMDRGame {
         }
     }
 
-    // ===== SEVERANCE (PRESTIGE) =====
     performSeverance() {
         if (this.dataPoints < 100000) return;
 
@@ -688,30 +989,32 @@ class LumonMDRGame {
 
         // Reset
         this.dataPoints = 0;
-        this.numbers = [];
+        this.initializeGrid();
         this.departmentItems.forEach(item => item.count = 0);
         this.activeUpgrades.forEach(up => up.purchased = false);
         this.synergyUpgrades.forEach(up => up.purchased = false);
-        this.comboUpgrades.forEach(up => up.purchased = false);
         this.techTree.forEach(up => up.purchased = false);
 
         this.activePower = 1;
         this.scanSpeed = 1500;
+        this.scanRadius = 60;
+        this.scanZoneLevel = 1;
+        this.clusterSize = 1;
+        this.respawnTime = 2000;
         this.identifierCount = 0;
         this.sorterCount = 0;
         this.macroCount = 0;
-        this.maxNumbers = 5;
 
         this.calculatePassiveGeneration();
         this.renderShop();
 
-        this.showNotification(`SEVERANCE COMPLETE: +${cpGained} Conformity Points`);
+        this.showNotification(`SEVERANCE: +${cpGained} Conformity Points`);
     }
 
     // ===== GAME LOOP =====
     gameLoop() {
         const now = Date.now();
-        const deltaTime = (now - this.lastUpdate) / 1000; // seconds
+        const deltaTime = (now - this.lastUpdate) / 1000;
         this.lastUpdate = now;
 
         // Passive generation
@@ -719,55 +1022,11 @@ class LumonMDRGame {
             this.dataPoints += this.passiveGeneration * deltaTime;
         }
 
-        // Spawn numbers
-        if (now - this.lastSpawn > this.spawnInterval) {
-            this.spawnNumber();
-            this.lastSpawn = now;
-        }
+        // Respawn
+        this.updateRespawn();
 
-        // Update scanning progress
-        if (this.currentScanning) {
-            const number = this.numbers.find(n => n.id === this.currentScanning.numberId);
-            if (number) {
-                const elapsed = now - this.currentScanning.startTime;
-                number.scanProgress = elapsed / this.scanSpeed;
-
-                if (number.scanProgress >= 1) {
-                    this.identifyNumber(number);
-                }
-            }
-        }
-
-        // Update automation
+        // Automation
         this.updateAutomation(deltaTime);
-
-        // Update numbers physics (simple gravity)
-        this.numbers.forEach(num => {
-            if (num === this.draggedNumber) return; // Don't update dragged number
-
-            num.vy += 0.2; // gravity
-            num.y += num.vy;
-            num.x += num.vx;
-
-            // Bounce off walls
-            if (num.x < 30 || num.x > this.canvas.width - 30) {
-                num.vx *= -0.8;
-                num.x = Math.max(30, Math.min(this.canvas.width - 30, num.x));
-            }
-
-            // Bounce off floor (but not too low)
-            if (num.y > this.canvas.height - 150) {
-                num.vy *= -0.6;
-                num.y = this.canvas.height - 150;
-                num.vx *= 0.95; // friction
-            }
-
-            // Don't go off top
-            if (num.y < 30) {
-                num.y = 30;
-                num.vy = 0;
-            }
-        });
 
         // Render
         this.render();
@@ -775,80 +1034,76 @@ class LumonMDRGame {
         // Update UI
         this.updateUI();
 
-        // Continue loop
         requestAnimationFrame(() => this.gameLoop());
     }
 
     // ===== RENDERING =====
     render() {
-        // Clear canvas
         this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw numbers
-        this.numbers.forEach(num => {
+        const time = Date.now() / 1000;
+
+        // Draw scan zone
+        if (!this.isDragging) {
             this.ctx.save();
+            this.ctx.strokeStyle = 'rgba(0, 255, 65, 0.3)';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.beginPath();
+            this.ctx.arc(this.mouseX, this.mouseY, this.scanRadius, 0, Math.PI * 2);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+            this.ctx.restore();
+        }
 
-            // Position
-            this.ctx.translate(num.x, num.y);
+        // Draw grid
+        this.grid.forEach(cell => {
+            if (cell.isEmpty) return;
 
-            if (num.state === 'unidentified') {
-                // Draw [???] with scan progress
-                this.ctx.fillStyle = '#00ff41';
-                this.ctx.font = 'bold 20px "IBM Plex Mono", monospace';
+            const x = cell.gridX * this.cellWidth + this.cellWidth / 2;
+            const y = cell.gridY * this.cellHeight + this.cellHeight / 2;
+
+            // Wiggle effect
+            const wiggleX = Math.sin(time * 2 + cell.wiggleOffset) * 2;
+            const wiggleY = Math.cos(time * 2.5 + cell.wiggleOffset) * 2;
+
+            this.ctx.save();
+            this.ctx.translate(x + wiggleX, y + wiggleY);
+
+            if (cell.state === 'unidentified' || cell.state === 'scanning') {
+                // [???]
+                this.ctx.fillStyle = cell.state === 'scanning' ? '#00ff41' : '#00aa2b';
+                this.ctx.font = 'bold 14px "IBM Plex Mono", monospace';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
                 this.ctx.fillText('[???]', 0, 0);
 
-                // Scan progress circle
-                if (num.scanProgress > 0) {
-                    this.ctx.strokeStyle = '#00ff41';
-                    this.ctx.lineWidth = 3;
-                    this.ctx.beginPath();
-                    this.ctx.arc(0, 0, 35, -Math.PI / 2, -Math.PI / 2 + (num.scanProgress * Math.PI * 2));
-                    this.ctx.stroke();
-                }
-
-                // Glow if hovering
-                if (this.hoveredNumber === num) {
-                    this.ctx.shadowColor = '#00ff41';
-                    this.ctx.shadowBlur = 20;
+                // Scan progress
+                if (cell.scanProgress > 0) {
                     this.ctx.strokeStyle = '#00ff41';
                     this.ctx.lineWidth = 2;
                     this.ctx.beginPath();
-                    this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
+                    this.ctx.arc(0, 0, 25, -Math.PI / 2, -Math.PI / 2 + (cell.scanProgress * Math.PI * 2));
                     this.ctx.stroke();
-                    this.ctx.shadowBlur = 0;
                 }
-
-            } else if (num.state === 'identified') {
-                // Draw actual number with category color
-                const category = this.categories[num.category];
+            } else if (cell.state === 'identified' || cell.state === 'selected') {
+                // Identified number
+                const category = this.categories[cell.category];
                 this.ctx.fillStyle = category.color;
-                this.ctx.font = 'bold 24px "IBM Plex Mono", monospace';
+                this.ctx.font = 'bold 16px "IBM Plex Mono", monospace';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
-                this.ctx.fillText(num.value.toString(), 0, 0);
+                this.ctx.fillText(cell.value.toString(), 0, 0);
 
-                // Category label
-                this.ctx.font = '10px "IBM Plex Mono", monospace';
-                this.ctx.fillText(category.name, 0, 20);
-
-                // Border
-                this.ctx.strokeStyle = category.color;
-                this.ctx.lineWidth = 2;
-                this.ctx.beginPath();
-                this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
-                this.ctx.stroke();
-
-                // Glow if being dragged
-                if (this.draggedNumber === num) {
-                    this.ctx.shadowColor = category.color;
-                    this.ctx.shadowBlur = 30;
+                // Border for selected
+                if (cell.state === 'selected') {
                     this.ctx.strokeStyle = category.color;
-                    this.ctx.lineWidth = 4;
+                    this.ctx.lineWidth = 3;
+                    this.ctx.shadowColor = category.color;
+                    this.ctx.shadowBlur = 15;
                     this.ctx.beginPath();
-                    this.ctx.arc(0, 0, 40, 0, Math.PI * 2);
+                    this.ctx.arc(0, 0, 22, 0, Math.PI * 2);
                     this.ctx.stroke();
                     this.ctx.shadowBlur = 0;
                 }
@@ -857,24 +1112,38 @@ class LumonMDRGame {
             this.ctx.restore();
         });
 
-        // Draw instruction text
-        if (this.numbers.length === 0) {
-            this.ctx.fillStyle = '#00aa2b';
-            this.ctx.font = '16px "IBM Plex Mono", monospace';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('En attente de données...', this.canvas.width / 2, this.canvas.height / 2);
+        // Draw selected cluster being dragged
+        if (this.isDragging && this.selectedCluster.length > 0) {
+            this.ctx.save();
+            this.ctx.translate(this.mouseX, this.mouseY);
+
+            this.selectedCluster.forEach((cell, index) => {
+                const offsetX = (index % 3) * 30 - 30;
+                const offsetY = Math.floor(index / 3) * 30;
+
+                const category = this.categories[cell.category];
+                this.ctx.fillStyle = category.color;
+                this.ctx.font = 'bold 18px "IBM Plex Mono", monospace';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+
+                this.ctx.shadowColor = category.color;
+                this.ctx.shadowBlur = 20;
+                this.ctx.fillText(cell.value.toString(), offsetX, offsetY);
+            });
+
+            this.ctx.shadowBlur = 0;
+            this.ctx.restore();
         }
     }
 
     // ===== UI UPDATES =====
     updateUI() {
-        // Top bar stats
         document.getElementById('dataPoints').textContent = this.formatNumber(Math.floor(this.dataPoints));
         document.getElementById('dpPerSec').textContent = this.formatNumber(this.passiveGeneration, 1) + '/sec';
         document.getElementById('activePower').textContent = this.activePower + '/refine';
         document.getElementById('conformityPoints').textContent = this.conformityPoints;
 
-        // Left sidebar stats
         document.getElementById('scanSpeed').textContent = (this.scanSpeed / 1000).toFixed(1) + 's';
         document.getElementById('identifierCount').textContent = this.identifierCount;
         document.getElementById('sorterCount').textContent = this.sorterCount;
@@ -884,28 +1153,21 @@ class LumonMDRGame {
         document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
         document.getElementById('totalRefined').textContent = this.formatNumber(this.totalRefined);
 
-        // Category counts
         document.getElementById('woeCount').textContent = this.categoryStats.woe;
         document.getElementById('frolicCount').textContent = this.categoryStats.frolic;
         document.getElementById('dreadCount').textContent = this.categoryStats.dread;
         document.getElementById('maliceCount').textContent = this.categoryStats.malice;
 
-        // Quota
         const quotaPercent = Math.min(100, (this.quotaProgress / this.currentQuota) * 100);
         document.getElementById('quotaFill').style.width = quotaPercent + '%';
         document.getElementById('quotaText').textContent = `${this.formatNumber(this.quotaProgress)} / ${this.formatNumber(this.currentQuota)}`;
 
-        // Terminal load
-        document.getElementById('terminalLoad').textContent = `Load: ${this.numbers.length}/${this.maxNumbers}`;
+        const filled = this.grid.filter(c => !c.isEmpty).length;
+        document.getElementById('terminalLoad').textContent = `Load: ${filled}/${this.grid.length}`;
 
-        // Severance button
-        const severanceBtn = document.getElementById('severanceBtn');
-        severanceBtn.disabled = this.dataPoints < 100000;
-
-        // Free time (outie world)
+        document.getElementById('severanceBtn').disabled = this.dataPoints < 100000;
         document.getElementById('freeTime').textContent = this.freeTime;
 
-        // Update shop affordability
         this.updateShopAffordability();
     }
 
@@ -923,12 +1185,10 @@ class LumonMDRGame {
         });
     }
 
-    // ===== UI INITIALIZATION =====
     initializeUI() {
         this.switchShopTab('department');
     }
 
-    // ===== NOTIFICATIONS =====
     showNotification(message) {
         const notif = document.getElementById('notification');
         notif.textContent = message;
@@ -945,7 +1205,6 @@ class LumonMDRGame {
         setTimeout(() => toast.classList.remove('show'), 2000);
     }
 
-    // ===== UTILITY =====
     formatNumber(num, decimals = 0) {
         if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
         if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
