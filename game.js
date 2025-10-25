@@ -1,6 +1,6 @@
 // ==================================================
-// LUMON INDUSTRIES - MDR TERMINAL v3.0
-// Macrodata Refinement Simulation - Grid System
+// LUMON INDUSTRIES - MDR TERMINAL v4.0
+// Macrodata Refinement Simulation - AUDITED VERSION
 // ==================================================
 
 class LumonMDRGame {
@@ -19,58 +19,55 @@ class LumonMDRGame {
         this.correctSorts = 0;
         this.incorrectSorts = 0;
 
-        // ===== GRID SYSTEM =====
+        // ===== GRID SYSTEM (Optimized with 2D array) =====
         this.gridCols = 10;
         this.gridRows = 20;
-        this.grid = []; // Array of numbers at each position
-        this.cellWidth = 0;
-        this.cellHeight = 0;
+        this.grid = []; // 2D array for O(1) access
+        this.allCells = []; // Flat array for iteration
 
         // ===== SCAN MECHANICS =====
-        this.scanSpeed = 1500; // ms to scan one number
-        this.scanRadius = 60; // pixels - zone d'effet du curseur
-        this.scanZoneLevel = 1; // upgrade level
+        this.scanSpeed = 2000; // ms - plus long au début
+        this.scanRadius = 80; // pixels - plus grand au début
+        this.scanZoneLevel = 1;
 
         // ===== CLUSTER MECHANICS =====
-        this.clusterSize = 1; // combien de numéros adjacents on peut prendre
-        this.selectedCluster = []; // numéros actuellement sélectionnés
-        this.isDragging = false;
+        this.clusterSize = 1;
 
         // ===== RESPAWN MECHANICS =====
-        this.respawnTime = 2000; // ms avant qu'un nouveau numéro apparaisse
-        this.emptySlots = []; // positions vides avec timestamp
-        this.lastRespawnCheck = Date.now();
+        this.respawnTime = 1500; // ms - plus rapide au début
+        this.emptySlots = [];
 
         // ===== COMBO SYSTEM =====
         this.currentCombo = 0;
-        this.comboMultiplier = 1;
+        this.maxCombo = 0;
         this.comboTimer = null;
         this.lastDropCategory = null;
         this.lastDropTime = 0;
+        this.comboDecayTime = 4000; // 4 secondes pour maintenir le combo
 
         // ===== CATEGORY SYSTEM =====
         this.categoryStats = { woe: 0, frolic: 0, dread: 0, malice: 0 };
         this.categories = {
             woe: {
-                ranges: [[1, 20], [666, 670]],
+                ranges: [[1, 25], [666, 669]],
                 color: '#ff3366',
                 multiplier: 1.5,
                 name: 'WOE'
             },
             frolic: {
-                ranges: [[21, 40], [100, 110]],
+                ranges: [[26, 50], [100, 111]],
                 color: '#ffdd33',
                 multiplier: 1.3,
                 name: 'FROLIC'
             },
             dread: {
-                ranges: [[41, 60], [200, 210]],
+                ranges: [[51, 75], [200, 222]],
                 color: '#9933ff',
                 multiplier: 2.0,
                 name: 'DREAD'
             },
             malice: {
-                ranges: [[61, 80], [300, 310]],
+                ranges: [[76, 99], [300, 333]],
                 color: '#ff8800',
                 multiplier: 1.8,
                 name: 'MALICE'
@@ -78,7 +75,7 @@ class LumonMDRGame {
         };
 
         // ===== QUOTA SYSTEM =====
-        this.currentQuota = 1000;
+        this.currentQuota = 500; // Plus accessible
         this.quotaProgress = 0;
         this.quotaLevel = 1;
 
@@ -90,91 +87,91 @@ class LumonMDRGame {
         // ===== WORLD STATE =====
         this.currentWorld = 'innie';
 
-        // ===== DEPARTMENT ITEMS =====
+        // ===== DEPARTMENT ITEMS (Rebalanced) =====
         this.departmentItems = [
             {
                 id: 'stagiaire',
                 icon: '👤',
                 name: 'Stagiaire',
                 description: 'Génère 0.1 DP/sec',
-                baseCost: 10,
+                baseCost: 15,
                 baseProduction: 0.1,
                 count: 0,
-                costMultiplier: 1.15
+                costMultiplier: 1.13
             },
             {
                 id: 'identifier',
                 icon: '🔍',
                 name: 'Identifier Auto',
-                description: 'Scanne 1 numéro toutes les 2 sec',
-                baseCost: 50,
+                description: 'Scanne 1 numéro toutes les 2s',
+                baseCost: 75,
                 baseProduction: 0.5,
                 count: 0,
-                costMultiplier: 1.15,
+                costMultiplier: 1.13,
                 special: 'identifier'
             },
             {
                 id: 'sorter',
                 icon: '📊',
                 name: 'Sorter Auto',
-                description: 'Trie 1 numéro identifié toutes les 3 sec',
-                baseCost: 150,
+                description: 'Trie 1 numéro toutes les 3s',
+                baseCost: 200,
                 baseProduction: 1,
                 count: 0,
-                costMultiplier: 1.15,
+                costMultiplier: 1.13,
                 special: 'sorter'
             },
             {
                 id: 'macro',
                 icon: '⚙️',
                 name: 'Macro Complet',
-                description: 'Scan + Tri automatique',
-                baseCost: 500,
+                description: 'Scan + Tri auto',
+                baseCost: 750,
                 baseProduction: 3,
                 count: 0,
-                costMultiplier: 1.15,
+                costMultiplier: 1.13,
                 special: 'macro'
             },
             {
                 id: 'coffee',
                 icon: '☕',
                 name: 'Machine à Café',
-                description: 'Booste tout le département',
-                baseCost: 1000,
-                baseProduction: 5,
+                description: 'Booste le département',
+                baseCost: 2000,
+                baseProduction: 8,
                 count: 0,
-                costMultiplier: 1.15
+                costMultiplier: 1.13
             },
             {
                 id: 'irving',
                 icon: '🖥️',
                 name: 'Serveur d\'Irving',
-                description: 'Traitement parallèle massif',
-                baseCost: 5000,
-                baseProduction: 20,
+                description: 'Traitement parallèle',
+                baseCost: 10000,
+                baseProduction: 40,
                 count: 0,
-                costMultiplier: 1.15
+                costMultiplier: 1.13
             },
             {
                 id: 'cobel',
                 icon: '👁️',
                 name: 'Mrs. Cobel',
                 description: 'Supervision totale',
-                baseCost: 25000,
-                baseProduction: 100,
+                baseCost: 50000,
+                baseProduction: 200,
                 count: 0,
-                costMultiplier: 1.15
+                costMultiplier: 1.13
             }
         ];
 
-        // ===== ACTIVE UPGRADES =====
+        // ===== ACTIVE UPGRADES (Rebalanced) =====
         this.activeUpgrades = [
             {
                 id: 'power1',
                 icon: '👆',
                 name: 'Formation de Base',
                 description: 'Puissance active +1',
-                cost: 100,
+                cost: 50,
                 purchased: false,
                 effect: () => this.activePower += 1
             },
@@ -182,17 +179,26 @@ class LumonMDRGame {
                 id: 'power2',
                 icon: '✌️',
                 name: 'Expertise Avancée',
-                description: 'Puissance active +3',
-                cost: 500,
+                description: 'Puissance active +2',
+                cost: 300,
                 purchased: false,
-                effect: () => this.activePower += 3
+                effect: () => this.activePower += 2
             },
             {
                 id: 'power3',
                 icon: '💪',
-                name: 'Maîtrise Totale',
+                name: 'Maîtrise Complète',
+                description: 'Puissance active +5',
+                cost: 1500,
+                purchased: false,
+                effect: () => this.activePower += 5
+            },
+            {
+                id: 'power4',
+                icon: '🔥',
+                name: 'Expert Lumon',
                 description: 'Puissance active +10',
-                cost: 2500,
+                cost: 8000,
                 purchased: false,
                 effect: () => this.activePower += 10
             },
@@ -200,62 +206,62 @@ class LumonMDRGame {
                 id: 'scan1',
                 icon: '⚡',
                 name: 'Scan Rapide',
-                description: 'Vitesse de scan -20%',
-                cost: 300,
+                description: 'Vitesse scan -25%',
+                cost: 200,
                 purchased: false,
-                effect: () => this.scanSpeed *= 0.8
+                effect: () => this.scanSpeed *= 0.75
             },
             {
                 id: 'scan2',
                 icon: '⚡⚡',
-                name: 'Scan Ultra-Rapide',
-                description: 'Vitesse de scan -30%',
-                cost: 1500,
+                name: 'Scan Ultra',
+                description: 'Vitesse scan -40%',
+                cost: 1000,
                 purchased: false,
-                effect: () => this.scanSpeed *= 0.7
+                effect: () => this.scanSpeed *= 0.6
             },
             {
                 id: 'scan3',
                 icon: '⚡⚡⚡',
                 name: 'Scan Instantané',
-                description: 'Vitesse de scan -50%',
-                cost: 8000,
+                description: 'Vitesse scan -60%',
+                cost: 5000,
                 purchased: false,
-                effect: () => this.scanSpeed *= 0.5
+                effect: () => this.scanSpeed *= 0.4
             },
             {
                 id: 'zone1',
                 icon: '🎯',
                 name: 'Zone Étendue',
-                description: 'Rayon de scan +50%',
-                cost: 400,
+                description: 'Rayon scan +40%',
+                cost: 250,
                 purchased: false,
-                effect: () => { this.scanRadius *= 1.5; this.scanZoneLevel++; }
+                effect: () => { this.scanRadius *= 1.4; this.scanZoneLevel++; }
             },
             {
                 id: 'zone2',
                 icon: '🎯🎯',
                 name: 'Zone Large',
-                description: 'Rayon de scan +100%',
-                cost: 2000,
+                description: 'Rayon scan +80%',
+                cost: 1200,
                 purchased: false,
-                effect: () => { this.scanRadius *= 2; this.scanZoneLevel++; }
+                effect: () => { this.scanRadius *= 1.8; this.scanZoneLevel++; }
             },
             {
                 id: 'zone3',
                 icon: '🎯🎯🎯',
                 name: 'Zone Massive',
-                description: 'Rayon de scan +150%',
-                cost: 10000,
+                description: 'Rayon scan +120%',
+                cost: 6000,
                 purchased: false,
-                effect: () => { this.scanRadius *= 2.5; this.scanZoneLevel++; }
+                effect: () => { this.scanRadius *= 2.2; this.scanZoneLevel++; }
             },
             {
                 id: 'cluster1',
                 icon: '🔗',
                 name: 'Cluster Duo',
-                description: 'Sélection adjacente: 2 numéros',
-                cost: 600,
+                description: 'Sélection: 2 adjacents',
+                cost: 400,
                 purchased: false,
                 effect: () => this.clusterSize = 2
             },
@@ -263,89 +269,114 @@ class LumonMDRGame {
                 id: 'cluster2',
                 icon: '🔗🔗',
                 name: 'Cluster Groupe',
-                description: 'Sélection adjacente: 5 numéros',
-                cost: 3000,
+                description: 'Sélection: 4 adjacents',
+                cost: 2000,
                 purchased: false,
-                effect: () => this.clusterSize = 5
+                effect: () => this.clusterSize = 4
             },
             {
                 id: 'cluster3',
                 icon: '🔗🔗🔗',
-                name: 'Cluster Massif',
-                description: 'Sélection adjacente: 10 numéros',
-                cost: 15000,
+                name: 'Cluster Étendu',
+                description: 'Sélection: 8 adjacents',
+                cost: 10000,
                 purchased: false,
-                effect: () => this.clusterSize = 10
+                effect: () => this.clusterSize = 8
+            },
+            {
+                id: 'cluster4',
+                icon: '🔗🔗🔗🔗',
+                name: 'Cluster Massif',
+                description: 'Sélection: 15 adjacents',
+                cost: 50000,
+                purchased: false,
+                effect: () => this.clusterSize = 15
             },
             {
                 id: 'respawn1',
                 icon: '⏱️',
                 name: 'Respawn Rapide',
-                description: 'Réapparition -30%',
-                cost: 800,
+                description: 'Réapparition -25%',
+                cost: 500,
                 purchased: false,
-                effect: () => this.respawnTime *= 0.7
+                effect: () => this.respawnTime *= 0.75
             },
             {
                 id: 'respawn2',
                 icon: '⏱️⏱️',
                 name: 'Respawn Ultra',
-                description: 'Réapparition -50%',
-                cost: 4000,
+                description: 'Réapparition -40%',
+                cost: 2500,
                 purchased: false,
-                effect: () => this.respawnTime *= 0.5
+                effect: () => this.respawnTime *= 0.6
             },
             {
                 id: 'respawn3',
                 icon: '⏱️⏱️⏱️',
-                name: 'Respawn Instantané',
-                description: 'Réapparition -70%',
-                cost: 20000,
+                name: 'Respawn Instant',
+                description: 'Réapparition -60%',
+                cost: 12000,
                 purchased: false,
-                effect: () => this.respawnTime *= 0.3
+                effect: () => this.respawnTime *= 0.4
             }
         ];
 
-        // ===== SYNERGY UPGRADES =====
+        // ===== SYNERGY UPGRADES (Rebalanced) =====
         this.synergyUpgrades = [
             {
                 id: 'syn1',
                 icon: '🌟',
                 name: 'Synergie Stagiaire',
-                description: '+10% production pour chaque Stagiaire',
-                cost: 2000,
+                description: '+10% prod/Stagiaire',
+                cost: 1500,
                 purchased: false
             },
             {
                 id: 'syn2',
                 icon: '🌟🌟',
                 name: 'Synergie Macro',
-                description: '+15% production pour chaque Macro',
-                cost: 10000,
+                description: '+15% prod/Macro',
+                cost: 7500,
                 purchased: false
             },
             {
                 id: 'combo1',
                 icon: '💥',
-                name: 'Bonus Combo x2',
-                description: 'Combo de 3+ : multiplicateur x2',
-                cost: 5000,
+                name: 'Bonus Combo ×2',
+                description: 'Combo 3+ = ×2',
+                cost: 3000,
                 purchased: false
             },
             {
                 id: 'combo2',
                 icon: '💥💥',
-                name: 'Bonus Combo x3',
-                description: 'Combo de 5+ : multiplicateur x3',
+                name: 'Bonus Combo ×3',
+                description: 'Combo 5+ = ×3',
                 cost: 15000,
+                purchased: false
+            },
+            {
+                id: 'combo3',
+                icon: '💥💥💥',
+                name: 'Bonus Combo ×5',
+                description: 'Combo 10+ = ×5',
+                cost: 75000,
                 purchased: false
             },
             {
                 id: 'cluster_same',
                 icon: '🎨',
                 name: 'Clusters Colorés',
-                description: '+50% chance numéros adjacents même catégorie',
-                cost: 7000,
+                description: '+60% chance adjacents même catégorie',
+                cost: 5000,
+                purchased: false
+            },
+            {
+                id: 'cluster_bonus',
+                icon: '✨',
+                name: 'Bonus Cluster',
+                description: '+20% par numéro au-delà de 2',
+                cost: 10000,
                 purchased: false
             }
         ];
@@ -356,7 +387,7 @@ class LumonMDRGame {
                 id: 'tech1',
                 icon: '📈',
                 name: 'Grille Étendue',
-                description: 'Plus de numéros sur la grille',
+                description: '+5 rangées',
                 cost: 3000,
                 purchased: false,
                 effect: () => { this.gridRows += 5; this.initializeGrid(); }
@@ -364,9 +395,9 @@ class LumonMDRGame {
             {
                 id: 'tech2',
                 icon: '🔬',
-                name: 'Analyse Prédictive',
-                description: 'Révèle la catégorie avant scan',
-                cost: 8000,
+                name: 'Scan Persistant',
+                description: 'Scan continue hors zone',
+                cost: 6000,
                 purchased: false
             }
         ];
@@ -380,6 +411,10 @@ class LumonMDRGame {
         this.mouseX = 0;
         this.mouseY = 0;
 
+        // ===== PERFORMANCE =====
+        this.cellWidth = 0;
+        this.cellHeight = 0;
+
         // ===== INITIALIZE =====
         this.initializeGrid();
         this.bindEvents();
@@ -391,39 +426,44 @@ class LumonMDRGame {
         this.gameLoop();
     }
 
-    // ===== GRID INITIALIZATION =====
+    // ===== GRID INITIALIZATION (Optimized) =====
     initializeGrid() {
         this.grid = [];
-        const totalCells = this.gridCols * this.gridRows;
+        this.allCells = [];
 
-        for (let i = 0; i < totalCells; i++) {
-            const row = Math.floor(i / this.gridCols);
-            const col = i % this.gridCols;
+        // Create 2D array for O(1) access
+        for (let row = 0; row < this.gridRows; row++) {
+            this.grid[row] = [];
+            for (let col = 0; col < this.gridCols; col++) {
+                const cell = {
+                    id: row * this.gridCols + col,
+                    gridX: col,
+                    gridY: row,
+                    value: null,
+                    category: null,
+                    state: 'empty',
+                    scanProgress: 0,
+                    scanStartTime: null,
+                    wiggleOffset: Math.random() * Math.PI * 2,
+                    isEmpty: true
+                };
 
-            const number = {
-                id: i,
-                gridX: col,
-                gridY: row,
-                value: null,
-                category: null,
-                state: 'empty', // 'empty', 'unidentified', 'scanning', 'identified', 'selected'
-                scanProgress: 0,
-                wiggleOffset: Math.random() * Math.PI * 2, // pour animation
-                isEmpty: true
-            };
-
-            this.grid.push(number);
+                this.grid[row][col] = cell;
+                this.allCells.push(cell);
+            }
         }
 
-        // Remplir 50% de la grille au départ
-        const toFill = Math.floor(totalCells * 0.5);
+        // Fill 60% initially
+        const toFill = Math.floor(this.allCells.length * 0.6);
         for (let i = 0; i < toFill; i++) {
             this.spawnNumberAtRandomPosition();
         }
+
+        this.resizeCanvas();
     }
 
     spawnNumberAtRandomPosition() {
-        const emptyCells = this.grid.filter(cell => cell.isEmpty);
+        const emptyCells = this.allCells.filter(cell => cell.isEmpty);
         if (emptyCells.length === 0) return;
 
         const cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
@@ -439,19 +479,17 @@ class LumonMDRGame {
         cell.state = 'unidentified';
         cell.isEmpty = false;
         cell.scanProgress = 0;
+        cell.scanStartTime = null;
     }
 
     getRandomCategory(cell) {
-        // Check if cluster upgrade purchased
         const clusterUpgrade = this.synergyUpgrades.find(u => u.id === 'cluster_same');
 
-        if (clusterUpgrade && clusterUpgrade.purchased && Math.random() < 0.5) {
-            // 50% chance de regarder les voisins
+        if (clusterUpgrade && clusterUpgrade.purchased && Math.random() < 0.6) {
             const neighbors = this.getNeighbors(cell.gridX, cell.gridY);
             const identifiedNeighbors = neighbors.filter(n => !n.isEmpty && n.category);
 
             if (identifiedNeighbors.length > 0) {
-                // Prendre la catégorie d'un voisin
                 return identifiedNeighbors[0].category;
             }
         }
@@ -472,7 +510,6 @@ class LumonMDRGame {
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
 
-        // Recalculate cell dimensions
         this.cellWidth = this.canvas.width / this.gridCols;
         this.cellHeight = this.canvas.height / this.gridRows;
     }
@@ -480,8 +517,7 @@ class LumonMDRGame {
     // ===== EVENT BINDING =====
     bindEvents() {
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        this.canvas.addEventListener('click', (e) => this.handleClick(e));
         this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
 
         document.querySelectorAll('.world-btn').forEach(btn => {
@@ -502,18 +538,39 @@ class LumonMDRGame {
         const rect = this.canvas.getBoundingClientRect();
         this.mouseX = e.clientX - rect.left;
         this.mouseY = e.clientY - rect.top;
+    }
 
-        // Scan numbers in radius
-        if (!this.isDragging) {
-            this.scanNumbersInRadius();
+    handleClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const gridX = Math.floor(mouseX / this.cellWidth);
+        const gridY = Math.floor(mouseY / this.cellHeight);
+
+        if (gridX < 0 || gridX >= this.gridCols || gridY < 0 || gridY >= this.gridRows) return;
+
+        const cell = this.grid[gridY][gridX];
+
+        if (cell && !cell.isEmpty && cell.state === 'identified') {
+            // Auto-sort avec cluster
+            const cluster = this.selectCluster(cell);
+            const category = cell.category;
+            this.sortCluster(cluster, category);
         }
     }
 
+    handleMouseLeave() {
+        // Optionnel : arrêter le scan hors canvas
+    }
+
+    // ===== SCANNING (Fixed - continuous scan) =====
     scanNumbersInRadius() {
         const now = Date.now();
+        const persistentScan = this.techTree.find(t => t.id === 'tech2')?.purchased;
 
-        this.grid.forEach(cell => {
-            if (cell.isEmpty || cell.state === 'identified') return;
+        for (const cell of this.allCells) {
+            if (cell.isEmpty || cell.state === 'identified') continue;
 
             const cellCenterX = cell.gridX * this.cellWidth + this.cellWidth / 2;
             const cellCenterY = cell.gridY * this.cellHeight + this.cellHeight / 2;
@@ -523,8 +580,9 @@ class LumonMDRGame {
                 (this.mouseY - cellCenterY) ** 2
             );
 
-            if (dist <= this.scanRadius) {
-                // Dans la zone de scan
+            const inRadius = dist <= this.scanRadius;
+
+            if (inRadius || (persistentScan && cell.state === 'scanning')) {
                 if (cell.state === 'unidentified') {
                     cell.state = 'scanning';
                     if (!cell.scanStartTime) {
@@ -539,40 +597,21 @@ class LumonMDRGame {
                     if (cell.scanProgress >= 1) {
                         cell.state = 'identified';
                         cell.scanProgress = 0;
-                        delete cell.scanStartTime;
+                        cell.scanStartTime = null;
                     }
                 }
             } else {
-                // Hors de la zone de scan
-                if (cell.state === 'scanning') {
+                // Hors zone et pas de scan persistant
+                if (cell.state === 'scanning' && !persistentScan) {
                     cell.state = 'unidentified';
                     cell.scanProgress = 0;
-                    delete cell.scanStartTime;
+                    cell.scanStartTime = null;
                 }
             }
-        });
-    }
-
-    handleMouseDown(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        const gridX = Math.floor(mouseX / this.cellWidth);
-        const gridY = Math.floor(mouseY / this.cellHeight);
-
-        const cell = this.grid.find(c => c.gridX === gridX && c.gridY === gridY);
-
-        if (cell && !cell.isEmpty && cell.state === 'identified') {
-            // Sélectionner le cluster
-            this.selectedCluster = this.selectCluster(cell);
-            this.isDragging = true;
-
-            // Marquer comme sélectionnés
-            this.selectedCluster.forEach(c => c.state = 'selected');
         }
     }
 
+    // ===== CLUSTER SELECTION (Optimized) =====
     selectCluster(startCell) {
         const cluster = [startCell];
         const visited = new Set([startCell.id]);
@@ -600,8 +639,8 @@ class LumonMDRGame {
     getNeighbors(gridX, gridY) {
         const neighbors = [];
         const directions = [
-            [-1, 0], [1, 0], [0, -1], [0, 1], // orthogonaux
-            [-1, -1], [-1, 1], [1, -1], [1, 1] // diagonaux
+            [-1, 0], [1, 0], [0, -1], [0, 1],
+            [-1, -1], [-1, 1], [1, -1], [1, 1]
         ];
 
         for (const [dx, dy] of directions) {
@@ -609,68 +648,16 @@ class LumonMDRGame {
             const ny = gridY + dy;
 
             if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows) {
-                const neighbor = this.grid.find(c => c.gridX === nx && c.gridY === ny);
-                if (neighbor) neighbors.push(neighbor);
+                neighbors.push(this.grid[ny][nx]);
             }
         }
 
         return neighbors;
     }
 
-    handleMouseUp(e) {
-        if (!this.isDragging || this.selectedCluster.length === 0) {
-            this.isDragging = false;
-            this.selectedCluster = [];
-            return;
-        }
-
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // Check if dropped on a bin
-        const binHeight = 80; // hauteur approximative des bins sous le canvas
-        const parentRect = this.canvas.parentElement.parentElement.getBoundingClientRect();
-        const absoluteY = e.clientY;
-
-        // Si on est en bas de l'écran (zone des bins)
-        if (absoluteY > parentRect.bottom - binHeight) {
-            const binWidth = parentRect.width / 4;
-            const relativeX = e.clientX - parentRect.left;
-            const binIndex = Math.floor(relativeX / binWidth);
-            const bins = ['woe', 'frolic', 'dread', 'malice'];
-            const droppedBin = bins[Math.max(0, Math.min(3, binIndex))];
-
-            if (droppedBin) {
-                this.sortCluster(this.selectedCluster, droppedBin);
-            }
-        }
-
-        // Reset selection
-        this.selectedCluster.forEach(c => {
-            if (c.state === 'selected') c.state = 'identified';
-        });
-        this.selectedCluster = [];
-        this.isDragging = false;
-    }
-
-    handleMouseLeave() {
-        if (this.isDragging) {
-            this.selectedCluster.forEach(c => {
-                if (c.state === 'selected') c.state = 'identified';
-            });
-            this.selectedCluster = [];
-            this.isDragging = false;
-        }
-    }
-
+    // ===== SORTING (Enhanced feedback) =====
     sortCluster(cluster, binCategory) {
         const now = Date.now();
-
-        // Vérifier les catégories
-        const categories = cluster.map(c => c.category);
-        const allSameCategory = categories.every(cat => cat === categories[0]);
-        const correctCategory = categories[0] === binCategory;
 
         let totalReward = 0;
         let allCorrect = true;
@@ -691,49 +678,56 @@ class LumonMDRGame {
 
             this.totalRefined++;
 
-            // Vider la cellule
+            // Clear cell
             cell.isEmpty = true;
             cell.value = null;
             cell.category = null;
             cell.state = 'empty';
             cell.scanProgress = 0;
+            cell.scanStartTime = null;
 
-            // Ajouter à la liste de respawn
             this.emptySlots.push({
                 cell: cell,
                 emptyTime: now
             });
         });
 
-        // COMBO SYSTEM
+        // COMBO SYSTEM (Enhanced)
         let comboBonus = 1;
 
-        if (allSameCategory && cluster.length >= 2) {
-            // Gérer le combo
+        if (allCorrect && cluster.length >= 1) {
             const timeSinceLastDrop = now - this.lastDropTime;
 
-            if (this.lastDropCategory === categories[0] && timeSinceLastDrop < 3000) {
+            if (this.lastDropCategory === binCategory && timeSinceLastDrop < this.comboDecayTime) {
                 this.currentCombo++;
             } else {
                 this.currentCombo = 1;
             }
 
-            this.lastDropCategory = categories[0];
+            this.lastDropCategory = binCategory;
             this.lastDropTime = now;
 
-            // Appliquer les bonus de combo
-            const combo2 = this.synergyUpgrades.find(u => u.id === 'combo1');
-            const combo3 = this.synergyUpgrades.find(u => u.id === 'combo2');
+            if (this.currentCombo > this.maxCombo) {
+                this.maxCombo = this.currentCombo;
+            }
 
-            if (combo3 && combo3.purchased && this.currentCombo >= 5) {
+            // Apply combo bonuses
+            const combo3 = this.synergyUpgrades.find(u => u.id === 'combo3');
+            const combo2 = this.synergyUpgrades.find(u => u.id === 'combo2');
+            const combo1 = this.synergyUpgrades.find(u => u.id === 'combo1');
+
+            if (combo3 && combo3.purchased && this.currentCombo >= 10) {
+                comboBonus = 5;
+            } else if (combo2 && combo2.purchased && this.currentCombo >= 5) {
                 comboBonus = 3;
-            } else if (combo2 && combo2.purchased && this.currentCombo >= 3) {
+            } else if (combo1 && combo1.purchased && this.currentCombo >= 3) {
                 comboBonus = 2;
             }
 
-            // Bonus de cluster
-            if (cluster.length >= 3) {
-                comboBonus *= (1 + (cluster.length - 3) * 0.1); // +10% par numéro au-dessus de 3
+            // Cluster size bonus
+            const clusterBonusUpgrade = this.synergyUpgrades.find(u => u.id === 'cluster_bonus');
+            if (clusterBonusUpgrade && clusterBonusUpgrade.purchased && cluster.length >= 3) {
+                comboBonus *= (1 + (cluster.length - 2) * 0.2);
             }
 
             // Reset combo timer
@@ -741,9 +735,8 @@ class LumonMDRGame {
             this.comboTimer = setTimeout(() => {
                 this.currentCombo = 0;
                 this.lastDropCategory = null;
-            }, 3000);
+            }, this.comboDecayTime);
         } else {
-            // Reset combo si pas de cluster ou catégories différentes
             this.currentCombo = 0;
             this.lastDropCategory = null;
         }
@@ -756,15 +749,18 @@ class LumonMDRGame {
 
             let message = `+${totalReward} DP`;
             if (cluster.length > 1) {
-                message += ` (x${cluster.length})`;
+                message += ` [×${cluster.length}]`;
+            }
+            if (this.currentCombo >= 3) {
+                message += ` COMBO ×${this.currentCombo}!`;
             }
             if (comboBonus > 1) {
-                message += ` COMBO x${this.currentCombo}! (×${comboBonus.toFixed(1)})`;
+                message += ` (×${comboBonus.toFixed(1)})`;
             }
 
             this.showToast(message);
         } else if (!allCorrect) {
-            this.showToast(`Incorrect! Précision réduite`, true);
+            this.showToast(`Erreur! Précision réduite`, true);
         }
     }
 
@@ -788,10 +784,9 @@ class LumonMDRGame {
 
     // ===== AUTOMATION =====
     updateAutomation(deltaTime) {
-        // Identifiers
         if (this.identifierCount > 0) {
             const scanRate = this.identifierCount * 0.5 * deltaTime;
-            const unidentified = this.grid.filter(c => !c.isEmpty && c.state === 'unidentified');
+            const unidentified = this.allCells.filter(c => !c.isEmpty && c.state === 'unidentified');
             const toScan = Math.min(unidentified.length, Math.floor(scanRate));
 
             for (let i = 0; i < toScan; i++) {
@@ -799,10 +794,9 @@ class LumonMDRGame {
             }
         }
 
-        // Sorters
         if (this.sorterCount > 0) {
             const sortRate = this.sorterCount * 0.33 * deltaTime;
-            const identified = this.grid.filter(c => !c.isEmpty && c.state === 'identified');
+            const identified = this.allCells.filter(c => !c.isEmpty && c.state === 'identified');
             const toSort = Math.min(identified.length, Math.floor(sortRate));
 
             for (let i = 0; i < toSort; i++) {
@@ -811,10 +805,9 @@ class LumonMDRGame {
             }
         }
 
-        // Macros
         if (this.macroCount > 0) {
             const macroRate = this.macroCount * 0.8 * deltaTime;
-            const any = this.grid.filter(c => !c.isEmpty);
+            const any = this.allCells.filter(c => !c.isEmpty);
             const toProcess = Math.min(any.length, Math.floor(macroRate));
 
             for (let i = 0; i < toProcess; i++) {
@@ -845,7 +838,7 @@ class LumonMDRGame {
                         <span class="shop-item-icon">${item.icon}</span>
                         <div class="shop-item-title">
                             <h4>${item.name}</h4>
-                            <span class="shop-item-count">Owned: ${item.count}</span>
+                            <span class="shop-item-count">×${item.count}</span>
                         </div>
                     </div>
                     <p class="shop-item-desc">${item.description}</p>
@@ -913,7 +906,7 @@ class LumonMDRGame {
 
         this.calculatePassiveGeneration();
         this.renderShop();
-        this.showNotification(`Acheté: ${item.name}`);
+        this.showNotification(`✓ ${item.name}`);
     }
 
     purchaseUpgrade(upgrade) {
@@ -924,7 +917,7 @@ class LumonMDRGame {
         if (upgrade.effect) upgrade.effect();
 
         this.renderShop();
-        this.showNotification(`Débloqué: ${upgrade.name}`);
+        this.showNotification(`✓ ${upgrade.name}`);
     }
 
     getUpgradeCost(item) {
@@ -996,22 +989,24 @@ class LumonMDRGame {
         this.techTree.forEach(up => up.purchased = false);
 
         this.activePower = 1;
-        this.scanSpeed = 1500;
-        this.scanRadius = 60;
+        this.scanSpeed = 2000;
+        this.scanRadius = 80;
         this.scanZoneLevel = 1;
         this.clusterSize = 1;
-        this.respawnTime = 2000;
+        this.respawnTime = 1500;
         this.identifierCount = 0;
         this.sorterCount = 0;
         this.macroCount = 0;
+        this.currentCombo = 0;
+        this.maxCombo = 0;
 
         this.calculatePassiveGeneration();
         this.renderShop();
 
-        this.showNotification(`SEVERANCE: +${cpGained} Conformity Points`);
+        this.showNotification(`SEVERANCE: +${cpGained} CP`);
     }
 
-    // ===== GAME LOOP =====
+    // ===== GAME LOOP (Fixed - continuous scan) =====
     gameLoop() {
         const now = Date.now();
         const deltaTime = (now - this.lastUpdate) / 1000;
@@ -1021,6 +1016,9 @@ class LumonMDRGame {
         if (this.passiveGeneration > 0) {
             this.dataPoints += this.passiveGeneration * deltaTime;
         }
+
+        // IMPORTANT: Scan continuously in game loop
+        this.scanNumbersInRadius();
 
         // Respawn
         this.updateRespawn();
@@ -1037,36 +1035,45 @@ class LumonMDRGame {
         requestAnimationFrame(() => this.gameLoop());
     }
 
-    // ===== RENDERING =====
+    // ===== RENDERING (Enhanced visuals) =====
     render() {
         this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         const time = Date.now() / 1000;
 
-        // Draw scan zone
-        if (!this.isDragging) {
-            this.ctx.save();
-            this.ctx.strokeStyle = 'rgba(0, 255, 65, 0.3)';
-            this.ctx.lineWidth = 2;
-            this.ctx.setLineDash([5, 5]);
-            this.ctx.beginPath();
-            this.ctx.arc(this.mouseX, this.mouseY, this.scanRadius, 0, Math.PI * 2);
-            this.ctx.stroke();
-            this.ctx.setLineDash([]);
-            this.ctx.restore();
-        }
+        // Draw scan zone (more visible)
+        this.ctx.save();
+        this.ctx.strokeStyle = 'rgba(0, 255, 65, 0.4)';
+        this.ctx.lineWidth = 3;
+        this.ctx.setLineDash([8, 4]);
+        this.ctx.beginPath();
+        this.ctx.arc(this.mouseX, this.mouseY, this.scanRadius, 0, Math.PI * 2);
+        this.ctx.stroke();
+
+        // Fill with gradient
+        const gradient = this.ctx.createRadialGradient(
+            this.mouseX, this.mouseY, 0,
+            this.mouseX, this.mouseY, this.scanRadius
+        );
+        gradient.addColorStop(0, 'rgba(0, 255, 65, 0.1)');
+        gradient.addColorStop(1, 'rgba(0, 255, 65, 0)');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
+
+        this.ctx.setLineDash([]);
+        this.ctx.restore();
 
         // Draw grid
-        this.grid.forEach(cell => {
-            if (cell.isEmpty) return;
+        for (const cell of this.allCells) {
+            if (cell.isEmpty) continue;
 
             const x = cell.gridX * this.cellWidth + this.cellWidth / 2;
             const y = cell.gridY * this.cellHeight + this.cellHeight / 2;
 
             // Wiggle effect
-            const wiggleX = Math.sin(time * 2 + cell.wiggleOffset) * 2;
-            const wiggleY = Math.cos(time * 2.5 + cell.wiggleOffset) * 2;
+            const wiggleX = Math.sin(time * 2 + cell.wiggleOffset) * 1.5;
+            const wiggleY = Math.cos(time * 2.5 + cell.wiggleOffset) * 1.5;
 
             this.ctx.save();
             this.ctx.translate(x + wiggleX, y + wiggleY);
@@ -1074,65 +1081,56 @@ class LumonMDRGame {
             if (cell.state === 'unidentified' || cell.state === 'scanning') {
                 // [???]
                 this.ctx.fillStyle = cell.state === 'scanning' ? '#00ff41' : '#00aa2b';
-                this.ctx.font = 'bold 14px "IBM Plex Mono", monospace';
+                this.ctx.font = 'bold 13px "IBM Plex Mono", monospace';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
                 this.ctx.fillText('[???]', 0, 0);
 
-                // Scan progress
+                // Scan progress circle
                 if (cell.scanProgress > 0) {
                     this.ctx.strokeStyle = '#00ff41';
-                    this.ctx.lineWidth = 2;
+                    this.ctx.lineWidth = 3;
                     this.ctx.beginPath();
-                    this.ctx.arc(0, 0, 25, -Math.PI / 2, -Math.PI / 2 + (cell.scanProgress * Math.PI * 2));
+                    this.ctx.arc(0, 0, 22, -Math.PI / 2, -Math.PI / 2 + (cell.scanProgress * Math.PI * 2));
                     this.ctx.stroke();
+
+                    // Progress text
+                    this.ctx.fillStyle = '#00ff41';
+                    this.ctx.font = 'bold 8px "IBM Plex Mono", monospace';
+                    this.ctx.fillText(Math.floor(cell.scanProgress * 100) + '%', 0, 0);
                 }
-            } else if (cell.state === 'identified' || cell.state === 'selected') {
-                // Identified number
+            } else if (cell.state === 'identified') {
+                // Identified number with better visibility
                 const category = this.categories[cell.category];
                 this.ctx.fillStyle = category.color;
-                this.ctx.font = 'bold 16px "IBM Plex Mono", monospace';
+                this.ctx.shadowColor = category.color;
+                this.ctx.shadowBlur = 8;
+                this.ctx.font = 'bold 17px "IBM Plex Mono", monospace';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
                 this.ctx.fillText(cell.value.toString(), 0, 0);
 
-                // Border for selected
-                if (cell.state === 'selected') {
-                    this.ctx.strokeStyle = category.color;
-                    this.ctx.lineWidth = 3;
-                    this.ctx.shadowColor = category.color;
-                    this.ctx.shadowBlur = 15;
-                    this.ctx.beginPath();
-                    this.ctx.arc(0, 0, 22, 0, Math.PI * 2);
-                    this.ctx.stroke();
-                    this.ctx.shadowBlur = 0;
-                }
+                // Subtle border
+                this.ctx.shadowBlur = 0;
+                this.ctx.strokeStyle = category.color;
+                this.ctx.lineWidth = 1.5;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                this.ctx.stroke();
             }
 
             this.ctx.restore();
-        });
+        }
 
-        // Draw selected cluster being dragged
-        if (this.isDragging && this.selectedCluster.length > 0) {
+        // Draw combo indicator on screen
+        if (this.currentCombo >= 3) {
             this.ctx.save();
-            this.ctx.translate(this.mouseX, this.mouseY);
-
-            this.selectedCluster.forEach((cell, index) => {
-                const offsetX = (index % 3) * 30 - 30;
-                const offsetY = Math.floor(index / 3) * 30;
-
-                const category = this.categories[cell.category];
-                this.ctx.fillStyle = category.color;
-                this.ctx.font = 'bold 18px "IBM Plex Mono", monospace';
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-
-                this.ctx.shadowColor = category.color;
-                this.ctx.shadowBlur = 20;
-                this.ctx.fillText(cell.value.toString(), offsetX, offsetY);
-            });
-
-            this.ctx.shadowBlur = 0;
+            this.ctx.fillStyle = '#ffdd33';
+            this.ctx.shadowColor = '#ffdd33';
+            this.ctx.shadowBlur = 20;
+            this.ctx.font = 'bold 24px "IBM Plex Mono", monospace';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(`COMBO ×${this.currentCombo}`, this.canvas.width / 2, 40);
             this.ctx.restore();
         }
     }
@@ -1162,8 +1160,8 @@ class LumonMDRGame {
         document.getElementById('quotaFill').style.width = quotaPercent + '%';
         document.getElementById('quotaText').textContent = `${this.formatNumber(this.quotaProgress)} / ${this.formatNumber(this.currentQuota)}`;
 
-        const filled = this.grid.filter(c => !c.isEmpty).length;
-        document.getElementById('terminalLoad').textContent = `Load: ${filled}/${this.grid.length}`;
+        const filled = this.allCells.filter(c => !c.isEmpty).length;
+        document.getElementById('terminalLoad').textContent = `Load: ${filled}/${this.allCells.length}`;
 
         document.getElementById('severanceBtn').disabled = this.dataPoints < 100000;
         document.getElementById('freeTime').textContent = this.freeTime;
@@ -1193,7 +1191,7 @@ class LumonMDRGame {
         const notif = document.getElementById('notification');
         notif.textContent = message;
         notif.classList.add('show');
-        setTimeout(() => notif.classList.remove('show'), 3000);
+        setTimeout(() => notif.classList.remove('show'), 2500);
     }
 
     showToast(message, isError = false) {
@@ -1202,7 +1200,7 @@ class LumonMDRGame {
         toast.style.borderColor = isError ? '#ff3366' : '#00ff41';
         toast.style.color = isError ? '#ff3366' : '#00ff41';
         toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2000);
+        setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
     formatNumber(num, decimals = 0) {
