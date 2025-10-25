@@ -233,36 +233,24 @@
         <!-- OUTIE WORLD (Hidden by default) -->
         <div id="outieWorld" class="outie-world hidden">
             <div class="outie-header">
-                <h2>🏠 Outside World</h2>
+                <h2>🏠 Temps Libre</h2>
                 <div class="free-time-counter">
                     <span class="stat-icon">⏰</span>
-                    <span>Free Time: <span id="freeTime">0</span></span>
+                    <span>Free Time: <span id="freeTime">0</span> FT</span>
                 </div>
+                <button id="returnToWorkBtn" class="activity-btn return-work-btn">
+                    🏢 Retourner au Bureau
+                </button>
             </div>
 
-            <div class="outie-activities">
-                <div class="activity-card">
-                    <h3>🍽️ Dinner at Ricken's</h3>
-                    <p>Listen to incomprehensible philosophy</p>
-                    <button class="activity-btn" data-activity="ricken">10 FT</button>
-                </div>
-
-                <div class="activity-card">
-                    <h3>🔍 Investigate Lumon</h3>
-                    <p>Search for clues about the company</p>
-                    <button class="activity-btn" data-activity="investigate">50 FT</button>
-                </div>
-
-                <div class="activity-card">
-                    <h3>💑 Go on a Date</h3>
-                    <p>Try to maintain relationships</p>
-                    <button class="activity-btn" data-activity="date">25 FT</button>
-                </div>
+            <div class="outie-section">
+                <h3>🏠 Housing - Améliorations Permanentes</h3>
+                <div id="housingItems" class="housing-grid"></div>
             </div>
 
-            <div class="outie-perks">
-                <h3>Permanent Bonuses from Outie Life:</h3>
-                <div id="outiePerksList"></div>
+            <div class="outie-section">
+                <h3>✨ Activities - Bonus Temporaires</h3>
+                <div id="outieActivitiesList" class="activities-grid"></div>
             </div>
         </div>
     </div>

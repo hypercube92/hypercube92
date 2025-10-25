@@ -1,6 +1,6 @@
 // ==================================================
-// LUMON INDUSTRIES - MDR TERMINAL v4.0
-// Macrodata Refinement Simulation - AUDITED VERSION
+// LUMON INDUSTRIES - MDR TERMINAL v4.1
+// Macrodata Refinement Simulation - BUGFIXES + OUTIE
 // ==================================================
 
 class LumonMDRGame {
@@ -9,6 +9,7 @@ class LumonMDRGame {
         this.dataPoints = 0;
         this.conformityPoints = 0;
         this.freeTime = 0;
+        this.freeTimeGeneration = 0.016; // ~1 FT/minute
 
         // ===== PASSIVE vs ACTIVE GENERATION =====
         this.passiveGeneration = 0;
@@ -19,22 +20,29 @@ class LumonMDRGame {
         this.correctSorts = 0;
         this.incorrectSorts = 0;
 
-        // ===== GRID SYSTEM (Optimized with 2D array) =====
+        // ===== OUTIE TIME SYSTEM =====
+        this.playTimeSeconds = 0;
+        this.lastOutieTime = 0;
+        this.outieTimeInterval = 120; // 2 minutes
+        this.canAccessOutie = false;
+        this.outieNotificationShown = false;
+
+        // ===== GRID SYSTEM =====
         this.gridCols = 10;
         this.gridRows = 20;
-        this.grid = []; // 2D array for O(1) access
-        this.allCells = []; // Flat array for iteration
+        this.grid = [];
+        this.allCells = [];
 
         // ===== SCAN MECHANICS =====
-        this.scanSpeed = 2000; // ms - plus long au début
-        this.scanRadius = 80; // pixels - plus grand au début
+        this.scanSpeed = 2000;
+        this.scanRadius = 35; // REDUCED - fits ~1 number
         this.scanZoneLevel = 1;
 
         // ===== CLUSTER MECHANICS =====
         this.clusterSize = 1;
 
         // ===== RESPAWN MECHANICS =====
-        this.respawnTime = 1500; // ms - plus rapide au début
+        this.respawnTime = 1500;
         this.emptySlots = [];
 
         // ===== COMBO SYSTEM =====
@@ -43,7 +51,7 @@ class LumonMDRGame {
         this.comboTimer = null;
         this.lastDropCategory = null;
         this.lastDropTime = 0;
-        this.comboDecayTime = 4000; // 4 secondes pour maintenir le combo
+        this.comboDecayTime = 4000;
 
         // ===== CATEGORY SYSTEM =====
         this.categoryStats = { woe: 0, frolic: 0, dread: 0, malice: 0 };
@@ -75,7 +83,7 @@ class LumonMDRGame {
         };
 
         // ===== QUOTA SYSTEM =====
-        this.currentQuota = 500; // Plus accessible
+        this.currentQuota = 500;
         this.quotaProgress = 0;
         this.quotaLevel = 1;
 
@@ -87,7 +95,36 @@ class LumonMDRGame {
         // ===== WORLD STATE =====
         this.currentWorld = 'innie';
 
-        // ===== DEPARTMENT ITEMS (Rebalanced) =====
+        // ===== OUTIE HOUSING =====
+        this.housingItems = [
+            { id: 'bed', icon: '🛏️', name: 'Lit Confortable', cost: 5, owned: false, boost: 0.05 },
+            { id: 'plant', icon: '🪴', name: 'Plante d\'Intérieur', cost: 3, owned: false, boost: 0.02 },
+            { id: 'sofa', icon: '🛋️', name: 'Canapé Moelleux', cost: 8, owned: false, boost: 0.08 },
+            { id: 'tv', icon: '📺', name: 'Télévision', cost: 12, owned: false, boost: 0.10 },
+            { id: 'bookshelf', icon: '📚', name: 'Bibliothèque', cost: 10, owned: false, boost: 0.09 },
+            { id: 'art', icon: '🖼️', name: 'Œuvre d\'Art', cost: 20, owned: false, boost: 0.15 },
+            { id: 'piano', icon: '🎹', name: 'Piano', cost: 30, owned: false, boost: 0.20 }
+        ];
+
+        // ===== OUTIE ACTIVITIES =====
+        this.activities = [
+            { id: 'gym', icon: '🏋️', name: 'Aller à la Salle de Sport', ftCost: 2, bonus: 'scan', value: 0.95, duration: 0 },
+            { id: 'dinner', icon: '🍽️', name: 'Dîner chez Ricken', ftCost: 3, bonus: 'power', value: 2, duration: 0 },
+            { id: 'date', icon: '💐', name: 'Rendez-vous Romantique', ftCost: 5, bonus: 'combo', value: 1.2, duration: 0 },
+            { id: 'therapy', icon: '🧘', name: 'Séance de Thérapie', ftCost: 4, bonus: 'passive', value: 1.1, duration: 0 },
+            { id: 'book', icon: '📖', name: 'Lire un Livre', ftCost: 1, bonus: 'cluster', value: 1, duration: 0 }
+        ];
+
+        // Active bonuses from Outie
+        this.outieBonuses = {
+            scanSpeedMult: 1,
+            powerBonus: 0,
+            comboMult: 1,
+            passiveMult: 1,
+            clusterBonus: 0
+        };
+
+        // ===== DEPARTMENT ITEMS =====
         this.departmentItems = [
             {
                 id: 'stagiaire',
@@ -103,7 +140,7 @@ class LumonMDRGame {
                 id: 'identifier',
                 icon: '🔍',
                 name: 'Identifier Auto',
-                description: 'Scanne 1 numéro toutes les 2s',
+                description: 'Scanne 1 numéro/2s',
                 baseCost: 75,
                 baseProduction: 0.5,
                 count: 0,
@@ -114,7 +151,7 @@ class LumonMDRGame {
                 id: 'sorter',
                 icon: '📊',
                 name: 'Sorter Auto',
-                description: 'Trie 1 numéro toutes les 3s',
+                description: 'Trie 1 numéro/3s',
                 baseCost: 200,
                 baseProduction: 1,
                 count: 0,
@@ -136,7 +173,7 @@ class LumonMDRGame {
                 id: 'coffee',
                 icon: '☕',
                 name: 'Machine à Café',
-                description: 'Booste le département',
+                description: 'Booste département',
                 baseCost: 2000,
                 baseProduction: 8,
                 count: 0,
@@ -164,7 +201,7 @@ class LumonMDRGame {
             }
         ];
 
-        // ===== ACTIVE UPGRADES (Rebalanced) =====
+        // ===== ACTIVE UPGRADES =====
         this.activeUpgrades = [
             {
                 id: 'power1',
@@ -321,7 +358,7 @@ class LumonMDRGame {
             }
         ];
 
-        // ===== SYNERGY UPGRADES (Rebalanced) =====
+        // ===== SYNERGY UPGRADES =====
         this.synergyUpgrades = [
             {
                 id: 'syn1',
@@ -367,7 +404,7 @@ class LumonMDRGame {
                 id: 'cluster_same',
                 icon: '🎨',
                 name: 'Clusters Colorés',
-                description: '+60% chance adjacents même catégorie',
+                description: '+60% adjacents même catégorie',
                 cost: 5000,
                 purchased: false
             },
@@ -375,7 +412,7 @@ class LumonMDRGame {
                 id: 'cluster_bonus',
                 icon: '✨',
                 name: 'Bonus Cluster',
-                description: '+20% par numéro au-delà de 2',
+                description: '+20% par numéro (>2)',
                 cost: 10000,
                 purchased: false
             }
@@ -407,11 +444,8 @@ class LumonMDRGame {
         this.ctx = this.canvas.getContext('2d');
         this.resizeCanvas();
 
-        // Mouse tracking
         this.mouseX = 0;
         this.mouseY = 0;
-
-        // ===== PERFORMANCE =====
         this.cellWidth = 0;
         this.cellHeight = 0;
 
@@ -420,18 +454,18 @@ class LumonMDRGame {
         this.bindEvents();
         this.initializeUI();
         this.renderShop();
+        this.renderOutieUI();
 
         // ===== START GAME LOOP =====
         this.lastUpdate = Date.now();
         this.gameLoop();
     }
 
-    // ===== GRID INITIALIZATION (Optimized) =====
+    // ===== GRID INITIALIZATION =====
     initializeGrid() {
         this.grid = [];
         this.allCells = [];
 
-        // Create 2D array for O(1) access
         for (let row = 0; row < this.gridRows; row++) {
             this.grid[row] = [];
             for (let col = 0; col < this.gridCols; col++) {
@@ -453,7 +487,6 @@ class LumonMDRGame {
             }
         }
 
-        // Fill 60% initially
         const toFill = Math.floor(this.allCells.length * 0.6);
         for (let i = 0; i < toFill; i++) {
             this.spawnNumberAtRandomPosition();
@@ -504,7 +537,6 @@ class LumonMDRGame {
         return Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
     }
 
-    // ===== CANVAS MANAGEMENT =====
     resizeCanvas() {
         const rect = this.canvas.parentElement.getBoundingClientRect();
         this.canvas.width = rect.width;
@@ -521,7 +553,10 @@ class LumonMDRGame {
         this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
 
         document.querySelectorAll('.world-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchWorld(e.target.dataset.world));
+            btn.addEventListener('click', (e) => {
+                const world = e.target.closest('.world-btn').dataset.world;
+                if (world) this.switchWorld(world);
+            });
         });
 
         document.querySelectorAll('.shop-tab-btn').forEach(btn => {
@@ -530,10 +565,15 @@ class LumonMDRGame {
 
         document.getElementById('severanceBtn').addEventListener('click', () => this.performSeverance());
 
+        // Outie return button
+        const returnBtn = document.getElementById('returnToWorkBtn');
+        if (returnBtn) {
+            returnBtn.addEventListener('click', () => this.switchWorld('innie'));
+        }
+
         window.addEventListener('resize', () => this.resizeCanvas());
     }
 
-    // ===== MOUSE HANDLERS =====
     handleMouseMove(e) {
         const rect = this.canvas.getBoundingClientRect();
         this.mouseX = e.clientX - rect.left;
@@ -553,24 +593,25 @@ class LumonMDRGame {
         const cell = this.grid[gridY][gridX];
 
         if (cell && !cell.isEmpty && cell.state === 'identified') {
-            // Auto-sort avec cluster
             const cluster = this.selectCluster(cell);
             const category = cell.category;
             this.sortCluster(cluster, category);
         }
     }
 
-    handleMouseLeave() {
-        // Optionnel : arrêter le scan hors canvas
-    }
+    handleMouseLeave() {}
 
-    // ===== SCANNING (Fixed - continuous scan) =====
+    // ===== SCANNING (FIXED) =====
     scanNumbersInRadius() {
         const now = Date.now();
         const persistentScan = this.techTree.find(t => t.id === 'tech2')?.purchased;
+        const effectiveScanSpeed = this.scanSpeed * this.outieBonuses.scanSpeedMult;
 
         for (const cell of this.allCells) {
-            if (cell.isEmpty || cell.state === 'identified') continue;
+            if (cell.isEmpty) continue;
+
+            // Skip if already identified
+            if (cell.state === 'identified') continue;
 
             const cellCenterX = cell.gridX * this.cellWidth + this.cellWidth / 2;
             const cellCenterY = cell.gridY * this.cellHeight + this.cellHeight / 2;
@@ -592,7 +633,7 @@ class LumonMDRGame {
 
                 if (cell.state === 'scanning') {
                     const elapsed = now - cell.scanStartTime;
-                    cell.scanProgress = Math.min(1, elapsed / this.scanSpeed);
+                    cell.scanProgress = Math.min(1, elapsed / effectiveScanSpeed);
 
                     if (cell.scanProgress >= 1) {
                         cell.state = 'identified';
@@ -601,7 +642,6 @@ class LumonMDRGame {
                     }
                 }
             } else {
-                // Hors zone et pas de scan persistant
                 if (cell.state === 'scanning' && !persistentScan) {
                     cell.state = 'unidentified';
                     cell.scanProgress = 0;
@@ -611,13 +651,14 @@ class LumonMDRGame {
         }
     }
 
-    // ===== CLUSTER SELECTION (Optimized) =====
+    // ===== CLUSTER SELECTION =====
     selectCluster(startCell) {
+        const maxCluster = this.clusterSize + this.outieBonuses.clusterBonus;
         const cluster = [startCell];
         const visited = new Set([startCell.id]);
         const queue = [startCell];
 
-        while (queue.length > 0 && cluster.length < this.clusterSize) {
+        while (queue.length > 0 && cluster.length < maxCluster) {
             const current = queue.shift();
             const neighbors = this.getNeighbors(current.gridX, current.gridY);
 
@@ -629,7 +670,7 @@ class LumonMDRGame {
                 cluster.push(neighbor);
                 queue.push(neighbor);
 
-                if (cluster.length >= this.clusterSize) break;
+                if (cluster.length >= maxCluster) break;
             }
         }
 
@@ -655,7 +696,7 @@ class LumonMDRGame {
         return neighbors;
     }
 
-    // ===== SORTING (Enhanced feedback) =====
+    // ===== SORTING =====
     sortCluster(cluster, binCategory) {
         const now = Date.now();
 
@@ -667,7 +708,8 @@ class LumonMDRGame {
 
             if (correct) {
                 const multiplier = this.categories[cell.category].multiplier;
-                const reward = Math.floor(this.activePower * multiplier);
+                const effectivePower = this.activePower + this.outieBonuses.powerBonus;
+                const reward = Math.floor(effectivePower * multiplier);
                 totalReward += reward;
                 this.categoryStats[cell.category]++;
                 this.correctSorts++;
@@ -678,7 +720,6 @@ class LumonMDRGame {
 
             this.totalRefined++;
 
-            // Clear cell
             cell.isEmpty = true;
             cell.value = null;
             cell.category = null;
@@ -686,13 +727,10 @@ class LumonMDRGame {
             cell.scanProgress = 0;
             cell.scanStartTime = null;
 
-            this.emptySlots.push({
-                cell: cell,
-                emptyTime: now
-            });
+            this.emptySlots.push({ cell: cell, emptyTime: now });
         });
 
-        // COMBO SYSTEM (Enhanced)
+        // COMBO SYSTEM
         let comboBonus = 1;
 
         if (allCorrect && cluster.length >= 1) {
@@ -711,7 +749,6 @@ class LumonMDRGame {
                 this.maxCombo = this.currentCombo;
             }
 
-            // Apply combo bonuses
             const combo3 = this.synergyUpgrades.find(u => u.id === 'combo3');
             const combo2 = this.synergyUpgrades.find(u => u.id === 'combo2');
             const combo1 = this.synergyUpgrades.find(u => u.id === 'combo1');
@@ -724,13 +761,13 @@ class LumonMDRGame {
                 comboBonus = 2;
             }
 
-            // Cluster size bonus
+            comboBonus *= this.outieBonuses.comboMult;
+
             const clusterBonusUpgrade = this.synergyUpgrades.find(u => u.id === 'cluster_bonus');
             if (clusterBonusUpgrade && clusterBonusUpgrade.purchased && cluster.length >= 3) {
                 comboBonus *= (1 + (cluster.length - 2) * 0.2);
             }
 
-            // Reset combo timer
             if (this.comboTimer) clearTimeout(this.comboTimer);
             this.comboTimer = setTimeout(() => {
                 this.currentCombo = 0;
@@ -764,7 +801,7 @@ class LumonMDRGame {
         }
     }
 
-    // ===== RESPAWN SYSTEM =====
+    // ===== RESPAWN =====
     updateRespawn() {
         const now = Date.now();
         const toRespawn = [];
@@ -822,7 +859,31 @@ class LumonMDRGame {
         }
     }
 
-    // ===== SHOP SYSTEM =====
+    // ===== OUTIE TIME SYSTEM =====
+    checkOutieTime() {
+        // Check if 2 minutes passed
+        if (this.playTimeSeconds - this.lastOutieTime >= this.outieTimeInterval) {
+            if (!this.canAccessOutie && !this.outieNotificationShown) {
+                this.canAccessOutie = true;
+                this.outieNotificationShown = true;
+                this.showNotification('⏰ Fin de journée ! Temps libre disponible');
+
+                // Highlight Outie button
+                const outieBtn = document.querySelector('[data-world="outie"]');
+                if (outieBtn) {
+                    outieBtn.classList.add('pulse');
+                }
+            }
+        }
+
+        // Also trigger on milestones
+        if (this.quotaProgress >= this.currentQuota && !this.canAccessOutie) {
+            this.canAccessOutie = true;
+            this.showNotification('🎯 Quota atteint ! Temps libre disponible');
+        }
+    }
+
+    // ===== SHOP SYSTEM (FIXED) =====
     renderShop() {
         const departmentList = document.getElementById('departmentList');
         if (departmentList) {
@@ -843,14 +904,14 @@ class LumonMDRGame {
                     </div>
                     <p class="shop-item-desc">${item.description}</p>
                     <div class="shop-item-footer">
-                        <span class="shop-item-cost">${this.formatNumber(cost)} DP</span>
-                        <button class="shop-item-btn" ${!affordable ? 'disabled' : ''}>
-                            ACHETER
-                        </button>
+                        <span class="shop-item-cost">${this.formatNumber(cost)}</span>
+                        <button class="shop-item-btn">ACHETER</button>
                     </div>
                 `;
 
-                div.querySelector('button').addEventListener('click', () => this.purchaseDepartment(item));
+                const btn = div.querySelector('button');
+                btn.disabled = !affordable;
+                btn.addEventListener('click', () => this.purchaseDepartment(item));
                 departmentList.appendChild(div);
             });
         }
@@ -881,14 +942,14 @@ class LumonMDRGame {
                 </div>
                 <p class="shop-item-desc">${upgrade.description}</p>
                 <div class="shop-item-footer">
-                    <span class="shop-item-cost">${this.formatNumber(upgrade.cost)} DP</span>
-                    <button class="shop-item-btn" ${!affordable ? 'disabled' : ''}>
-                        ACHETER
-                    </button>
+                    <span class="shop-item-cost">${this.formatNumber(upgrade.cost)}</span>
+                    <button class="shop-item-btn">ACHETER</button>
                 </div>
             `;
 
-            div.querySelector('button').addEventListener('click', () => this.purchaseUpgrade(upgrade));
+            const btn = div.querySelector('button');
+            btn.disabled = !affordable;
+            btn.addEventListener('click', () => this.purchaseUpgrade(upgrade));
             container.appendChild(div);
         });
     }
@@ -942,7 +1003,114 @@ class LumonMDRGame {
             if (macro) total += macro.baseProduction * macro.count * 0.15;
         }
 
+        total *= this.outieBonuses.passiveMult;
+
         this.passiveGeneration = total;
+    }
+
+    // ===== OUTIE UI =====
+    renderOutieUI() {
+        // Housing
+        const housingContainer = document.getElementById('housingItems');
+        if (housingContainer) {
+            housingContainer.innerHTML = '';
+            this.housingItems.forEach(item => {
+                const affordable = this.freeTime >= item.cost;
+
+                const div = document.createElement('div');
+                div.className = `activity-card ${item.owned ? 'owned' : ''} ${affordable ? 'affordable' : ''}`;
+                div.innerHTML = `
+                    <h3>${item.icon} ${item.name}</h3>
+                    <p>Bonus production: +${(item.boost * 100).toFixed(0)}%</p>
+                    <button class="activity-btn" ${item.owned || !affordable ? 'disabled' : ''}>
+                        ${item.owned ? 'POSSÉDÉ' : item.cost + ' FT'}
+                    </button>
+                `;
+
+                const btn = div.querySelector('button');
+                if (!item.owned) {
+                    btn.addEventListener('click', () => this.purchaseHousing(item));
+                }
+                housingContainer.appendChild(div);
+            });
+        }
+
+        // Activities
+        const activitiesContainer = document.getElementById('outieActivitiesList');
+        if (activitiesContainer) {
+            activitiesContainer.innerHTML = '';
+            this.activities.forEach(activity => {
+                const affordable = this.freeTime >= activity.ftCost;
+
+                const div = document.createElement('div');
+                div.className = `activity-card ${affordable ? 'affordable' : ''}`;
+                div.innerHTML = `
+                    <h3>${activity.icon} ${activity.name}</h3>
+                    <p>${this.getActivityDescription(activity)}</p>
+                    <button class="activity-btn" ${!affordable ? 'disabled' : ''}>
+                        ${activity.ftCost} FT
+                    </button>
+                `;
+
+                const btn = div.querySelector('button');
+                btn.addEventListener('click', () => this.doActivity(activity));
+                activitiesContainer.appendChild(div);
+            });
+        }
+    }
+
+    getActivityDescription(activity) {
+        const descriptions = {
+            'gym': 'Scan 5% plus rapide (temporaire)',
+            'dinner': '+2 Puissance active (temporaire)',
+            'date': 'Combos +20% (temporaire)',
+            'therapy': 'Production passive +10% (temporaire)',
+            'book': '+1 Taille cluster (temporaire)'
+        };
+        return descriptions[activity.id] || activity.bonus;
+    }
+
+    purchaseHousing(item) {
+        if (this.freeTime < item.cost || item.owned) return;
+
+        this.freeTime -= item.cost;
+        item.owned = true;
+
+        // Apply permanent boost
+        this.outieBonuses.passiveMult += item.boost;
+        this.calculatePassiveGeneration();
+
+        this.renderOutieUI();
+        this.showNotification(`🏠 Acheté: ${item.name}`);
+    }
+
+    doActivity(activity) {
+        if (this.freeTime < activity.ftCost) return;
+
+        this.freeTime -= activity.ftCost;
+
+        // Apply temporary boost
+        switch(activity.bonus) {
+            case 'scan':
+                this.outieBonuses.scanSpeedMult = activity.value;
+                break;
+            case 'power':
+                this.outieBonuses.powerBonus = activity.value;
+                break;
+            case 'combo':
+                this.outieBonuses.comboMult = activity.value;
+                break;
+            case 'passive':
+                this.outieBonuses.passiveMult = activity.value;
+                this.calculatePassiveGeneration();
+                break;
+            case 'cluster':
+                this.outieBonuses.clusterBonus = activity.value;
+                break;
+        }
+
+        this.renderOutieUI();
+        this.showNotification(`✨ ${activity.name}`);
     }
 
     switchShopTab(tabName) {
@@ -959,18 +1127,28 @@ class LumonMDRGame {
     switchWorld(world) {
         this.currentWorld = world;
 
-        document.querySelectorAll('.world-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector(`[data-world="${world}"]`).classList.add('active');
+        // Update button states
+        document.querySelectorAll('.world-btn').forEach(btn => btn.classList.remove('active', 'pulse'));
+        const activeBtn = document.querySelector(`[data-world="${world}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
 
         const gameContainer = document.querySelector('.game-container');
         const outieWorld = document.getElementById('outieWorld');
 
         if (world === 'outie') {
+            if (!this.canAccessOutie) {
+                this.showToast('Temps libre pas encore disponible', true);
+                return;
+            }
             gameContainer.style.display = 'none';
             outieWorld.classList.remove('hidden');
+            this.outieNotificationShown = false;
         } else {
             gameContainer.style.display = 'grid';
             outieWorld.classList.add('hidden');
+            // Reset for next time
+            this.canAccessOutie = false;
+            this.lastOutieTime = this.playTimeSeconds;
         }
     }
 
@@ -980,7 +1158,6 @@ class LumonMDRGame {
         const cpGained = Math.floor(this.dataPoints / 10000);
         this.conformityPoints += cpGained;
 
-        // Reset
         this.dataPoints = 0;
         this.initializeGrid();
         this.departmentItems.forEach(item => item.count = 0);
@@ -990,7 +1167,7 @@ class LumonMDRGame {
 
         this.activePower = 1;
         this.scanSpeed = 2000;
-        this.scanRadius = 80;
+        this.scanRadius = 35;
         this.scanZoneLevel = 1;
         this.clusterSize = 1;
         this.respawnTime = 1500;
@@ -1000,34 +1177,48 @@ class LumonMDRGame {
         this.currentCombo = 0;
         this.maxCombo = 0;
 
+        // Reset Outie bonuses
+        this.outieBonuses = {
+            scanSpeedMult: 1,
+            powerBonus: 0,
+            comboMult: 1,
+            passiveMult: 1,
+            clusterBonus: 0
+        };
+
         this.calculatePassiveGeneration();
         this.renderShop();
 
         this.showNotification(`SEVERANCE: +${cpGained} CP`);
     }
 
-    // ===== GAME LOOP (Fixed - continuous scan) =====
+    // ===== GAME LOOP =====
     gameLoop() {
         const now = Date.now();
         const deltaTime = (now - this.lastUpdate) / 1000;
         this.lastUpdate = now;
+
+        // Track play time
+        this.playTimeSeconds += deltaTime;
+
+        // Generate Free Time
+        this.freeTime += this.freeTimeGeneration * deltaTime;
 
         // Passive generation
         if (this.passiveGeneration > 0) {
             this.dataPoints += this.passiveGeneration * deltaTime;
         }
 
-        // IMPORTANT: Scan continuously in game loop
-        this.scanNumbersInRadius();
+        // Only update game if in Innie world
+        if (this.currentWorld === 'innie') {
+            this.scanNumbersInRadius();
+            this.updateRespawn();
+            this.updateAutomation(deltaTime);
+            this.render();
+        }
 
-        // Respawn
-        this.updateRespawn();
-
-        // Automation
-        this.updateAutomation(deltaTime);
-
-        // Render
-        this.render();
+        // Check Outie Time availability
+        this.checkOutieTime();
 
         // Update UI
         this.updateUI();
@@ -1035,14 +1226,14 @@ class LumonMDRGame {
         requestAnimationFrame(() => this.gameLoop());
     }
 
-    // ===== RENDERING (Enhanced visuals) =====
+    // ===== RENDERING (FIXED - ??? disappear) =====
     render() {
         this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         const time = Date.now() / 1000;
 
-        // Draw scan zone (more visible)
+        // Draw scan zone
         this.ctx.save();
         this.ctx.strokeStyle = 'rgba(0, 255, 65, 0.4)';
         this.ctx.lineWidth = 3;
@@ -1051,7 +1242,6 @@ class LumonMDRGame {
         this.ctx.arc(this.mouseX, this.mouseY, this.scanRadius, 0, Math.PI * 2);
         this.ctx.stroke();
 
-        // Fill with gradient
         const gradient = this.ctx.createRadialGradient(
             this.mouseX, this.mouseY, 0,
             this.mouseX, this.mouseY, this.scanRadius
@@ -1071,36 +1261,42 @@ class LumonMDRGame {
             const x = cell.gridX * this.cellWidth + this.cellWidth / 2;
             const y = cell.gridY * this.cellHeight + this.cellHeight / 2;
 
-            // Wiggle effect
             const wiggleX = Math.sin(time * 2 + cell.wiggleOffset) * 1.5;
             const wiggleY = Math.cos(time * 2.5 + cell.wiggleOffset) * 1.5;
 
             this.ctx.save();
             this.ctx.translate(x + wiggleX, y + wiggleY);
 
-            if (cell.state === 'unidentified' || cell.state === 'scanning') {
-                // [???]
-                this.ctx.fillStyle = cell.state === 'scanning' ? '#00ff41' : '#00aa2b';
+            if (cell.state === 'unidentified') {
+                // UNIDENTIFIED: Show [???] ONLY
+                this.ctx.fillStyle = '#00aa2b';
                 this.ctx.font = 'bold 13px "IBM Plex Mono", monospace';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
                 this.ctx.fillText('[???]', 0, 0);
 
-                // Scan progress circle
-                if (cell.scanProgress > 0) {
-                    this.ctx.strokeStyle = '#00ff41';
-                    this.ctx.lineWidth = 3;
-                    this.ctx.beginPath();
-                    this.ctx.arc(0, 0, 22, -Math.PI / 2, -Math.PI / 2 + (cell.scanProgress * Math.PI * 2));
-                    this.ctx.stroke();
+            } else if (cell.state === 'scanning') {
+                // SCANNING: Show [???] with progress
+                this.ctx.fillStyle = '#00ff41';
+                this.ctx.font = 'bold 13px "IBM Plex Mono", monospace';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('[???]', 0, 0);
 
-                    // Progress text
-                    this.ctx.fillStyle = '#00ff41';
-                    this.ctx.font = 'bold 8px "IBM Plex Mono", monospace';
-                    this.ctx.fillText(Math.floor(cell.scanProgress * 100) + '%', 0, 0);
-                }
+                // Progress circle
+                this.ctx.strokeStyle = '#00ff41';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, 22, -Math.PI / 2, -Math.PI / 2 + (cell.scanProgress * Math.PI * 2));
+                this.ctx.stroke();
+
+                // Progress %
+                this.ctx.fillStyle = '#00ff41';
+                this.ctx.font = 'bold 8px "IBM Plex Mono", monospace';
+                this.ctx.fillText(Math.floor(cell.scanProgress * 100) + '%', 0, 0);
+
             } else if (cell.state === 'identified') {
-                // Identified number with better visibility
+                // IDENTIFIED: Show number with wiggle (NO [???])
                 const category = this.categories[cell.category];
                 this.ctx.fillStyle = category.color;
                 this.ctx.shadowColor = category.color;
@@ -1110,7 +1306,6 @@ class LumonMDRGame {
                 this.ctx.textBaseline = 'middle';
                 this.ctx.fillText(cell.value.toString(), 0, 0);
 
-                // Subtle border
                 this.ctx.shadowBlur = 0;
                 this.ctx.strokeStyle = category.color;
                 this.ctx.lineWidth = 1.5;
@@ -1122,7 +1317,7 @@ class LumonMDRGame {
             this.ctx.restore();
         }
 
-        // Draw combo indicator on screen
+        // Draw combo indicator
         if (this.currentCombo >= 3) {
             this.ctx.save();
             this.ctx.fillStyle = '#ffdd33';
@@ -1139,10 +1334,10 @@ class LumonMDRGame {
     updateUI() {
         document.getElementById('dataPoints').textContent = this.formatNumber(Math.floor(this.dataPoints));
         document.getElementById('dpPerSec').textContent = this.formatNumber(this.passiveGeneration, 1) + '/sec';
-        document.getElementById('activePower').textContent = this.activePower + '/refine';
+        document.getElementById('activePower').textContent = (this.activePower + this.outieBonuses.powerBonus) + '/refine';
         document.getElementById('conformityPoints').textContent = this.conformityPoints;
 
-        document.getElementById('scanSpeed').textContent = (this.scanSpeed / 1000).toFixed(1) + 's';
+        document.getElementById('scanSpeed').textContent = ((this.scanSpeed * this.outieBonuses.scanSpeedMult) / 1000).toFixed(1) + 's';
         document.getElementById('identifierCount').textContent = this.identifierCount;
         document.getElementById('sorterCount').textContent = this.sorterCount;
         document.getElementById('macroCount').textContent = this.macroCount;
@@ -1164,23 +1359,7 @@ class LumonMDRGame {
         document.getElementById('terminalLoad').textContent = `Load: ${filled}/${this.allCells.length}`;
 
         document.getElementById('severanceBtn').disabled = this.dataPoints < 100000;
-        document.getElementById('freeTime').textContent = this.freeTime;
-
-        this.updateShopAffordability();
-    }
-
-    updateShopAffordability() {
-        document.querySelectorAll('.shop-item').forEach(item => {
-            const costText = item.querySelector('.shop-item-cost')?.textContent;
-            if (!costText) return;
-
-            const cost = parseFloat(costText.replace(/[^0-9.]/g, ''));
-            const affordable = this.dataPoints >= cost;
-
-            item.classList.toggle('affordable', affordable);
-            const btn = item.querySelector('.shop-item-btn');
-            if (btn) btn.disabled = !affordable;
-        });
+        document.getElementById('freeTime').textContent = this.formatNumber(this.freeTime, 1);
     }
 
     initializeUI() {
