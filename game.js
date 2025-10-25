@@ -92,6 +92,11 @@ class LumonMDRGame {
         this.sorterCount = 0;
         this.macroCount = 0;
 
+        // Automation accumulators (for sub-1 rates)
+        this.identifierAccum = 0;
+        this.sorterAccum = 0;
+        this.macroAccum = 0;
+
         // ===== WORLD STATE =====
         this.currentWorld = 'innie';
 
@@ -821,39 +826,60 @@ class LumonMDRGame {
 
     // ===== AUTOMATION =====
     updateAutomation(deltaTime) {
+        // IDENTIFIER - Auto-identify unidentified numbers
         if (this.identifierCount > 0) {
-            const scanRate = this.identifierCount * 0.5 * deltaTime;
-            const unidentified = this.allCells.filter(c => !c.isEmpty && c.state === 'unidentified');
-            const toScan = Math.min(unidentified.length, Math.floor(scanRate));
+            const scanRate = this.identifierCount * 0.5; // per second
+            this.identifierAccum += scanRate * deltaTime;
 
-            for (let i = 0; i < toScan; i++) {
-                unidentified[i].state = 'identified';
-            }
-        }
-
-        if (this.sorterCount > 0) {
-            const sortRate = this.sorterCount * 0.33 * deltaTime;
-            const identified = this.allCells.filter(c => !c.isEmpty && c.state === 'identified');
-            const toSort = Math.min(identified.length, Math.floor(sortRate));
-
-            for (let i = 0; i < toSort; i++) {
-                const cell = identified[i];
-                this.sortCluster([cell], cell.category);
-            }
-        }
-
-        if (this.macroCount > 0) {
-            const macroRate = this.macroCount * 0.8 * deltaTime;
-            const any = this.allCells.filter(c => !c.isEmpty);
-            const toProcess = Math.min(any.length, Math.floor(macroRate));
-
-            for (let i = 0; i < toProcess; i++) {
-                const cell = any[i];
-                if (cell.state === 'unidentified') {
-                    cell.state = 'identified';
+            while (this.identifierAccum >= 1) {
+                const unidentified = this.allCells.filter(c => !c.isEmpty && c.state === 'unidentified');
+                if (unidentified.length > 0) {
+                    unidentified[0].state = 'identified';
+                    this.identifierAccum -= 1;
+                } else {
+                    this.identifierAccum = 0;
+                    break;
                 }
-                if (cell.state === 'identified') {
+            }
+        }
+
+        // SORTER - Auto-sort identified numbers
+        if (this.sorterCount > 0) {
+            const sortRate = this.sorterCount * 0.33; // per second
+            this.sorterAccum += sortRate * deltaTime;
+
+            while (this.sorterAccum >= 1) {
+                const identified = this.allCells.filter(c => !c.isEmpty && c.state === 'identified');
+                if (identified.length > 0) {
+                    const cell = identified[0];
                     this.sortCluster([cell], cell.category);
+                    this.sorterAccum -= 1;
+                } else {
+                    this.sorterAccum = 0;
+                    break;
+                }
+            }
+        }
+
+        // MACRO - Auto-process everything
+        if (this.macroCount > 0) {
+            const macroRate = this.macroCount * 0.8; // per second
+            this.macroAccum += macroRate * deltaTime;
+
+            while (this.macroAccum >= 1) {
+                const any = this.allCells.filter(c => !c.isEmpty);
+                if (any.length > 0) {
+                    const cell = any[0];
+                    if (cell.state === 'unidentified') {
+                        cell.state = 'identified';
+                    }
+                    if (cell.state === 'identified') {
+                        this.sortCluster([cell], cell.category);
+                    }
+                    this.macroAccum -= 1;
+                } else {
+                    this.macroAccum = 0;
+                    break;
                 }
             }
         }
@@ -1022,12 +1048,14 @@ class LumonMDRGame {
                 div.innerHTML = `
                     <h3>${item.icon} ${item.name}</h3>
                     <p>Bonus production: +${(item.boost * 100).toFixed(0)}%</p>
-                    <button class="activity-btn" ${item.owned || !affordable ? 'disabled' : ''}>
+                    <button class="activity-btn">
                         ${item.owned ? 'POSSÉDÉ' : item.cost + ' FT'}
                     </button>
                 `;
 
                 const btn = div.querySelector('button');
+                // IMPORTANT: Set disabled as JS property, not HTML attribute
+                btn.disabled = item.owned || !affordable;
                 if (!item.owned) {
                     btn.addEventListener('click', () => this.purchaseHousing(item));
                 }
@@ -1047,12 +1075,14 @@ class LumonMDRGame {
                 div.innerHTML = `
                     <h3>${activity.icon} ${activity.name}</h3>
                     <p>${this.getActivityDescription(activity)}</p>
-                    <button class="activity-btn" ${!affordable ? 'disabled' : ''}>
+                    <button class="activity-btn">
                         ${activity.ftCost} FT
                     </button>
                 `;
 
                 const btn = div.querySelector('button');
+                // IMPORTANT: Set disabled as JS property, not HTML attribute
+                btn.disabled = !affordable;
                 btn.addEventListener('click', () => this.doActivity(activity));
                 activitiesContainer.appendChild(div);
             });
@@ -1359,6 +1389,47 @@ class LumonMDRGame {
 
         // Update shop button states continuously
         this.updateShopButtons();
+
+        // Update Outie buttons if in Outie world
+        if (this.currentWorld === 'outie') {
+            this.updateOutieButtons();
+        }
+    }
+
+    updateOutieButtons() {
+        // Update housing buttons
+        const housingContainer = document.getElementById('housingItems');
+        if (housingContainer) {
+            const cards = housingContainer.querySelectorAll('.activity-card');
+            cards.forEach((card, index) => {
+                if (index < this.housingItems.length) {
+                    const item = this.housingItems[index];
+                    const affordable = this.freeTime >= item.cost;
+                    const btn = card.querySelector('button');
+                    if (btn) {
+                        btn.disabled = item.owned || !affordable;
+                        card.classList.toggle('affordable', affordable && !item.owned);
+                    }
+                }
+            });
+        }
+
+        // Update activities buttons
+        const activitiesContainer = document.getElementById('outieActivitiesList');
+        if (activitiesContainer) {
+            const cards = activitiesContainer.querySelectorAll('.activity-card');
+            cards.forEach((card, index) => {
+                if (index < this.activities.length) {
+                    const activity = this.activities[index];
+                    const affordable = this.freeTime >= activity.ftCost;
+                    const btn = card.querySelector('button');
+                    if (btn) {
+                        btn.disabled = !affordable;
+                        card.classList.toggle('affordable', affordable);
+                    }
+                }
+            });
+        }
     }
 
     updateShopButtons() {
