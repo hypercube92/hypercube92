@@ -86,6 +86,34 @@ class LumonMDRGame {
         this.lastDropTime = 0;
         this.comboDecayTime = GAME_CONSTANTS.COMBO_DECAY_MS;
 
+        // ===== v6.0: DAY/TIME MANAGEMENT =====
+        this.currentDay = 1;
+        this.dayPhase = 'work'; // 'work' or 'evening'
+        this.workStartTime = null;
+        this.workDuration = 8 * 3600000; // 8h en ms
+        this.eveningHours = 7; // 17h-00h = 7h disponibles
+        this.eveningStartTime = null;
+
+        // ===== v6.0: FATIGUE SYSTEM =====
+        this.fatigue = 0; // 0-100
+        this.maxFatigue = 100;
+        this.fatigueRate = 0.2; // Base rate per second (manual actions increase this)
+        this.lastActionTime = 0;
+
+        // ===== v6.0: NEEDS SYSTEM (Outie wellbeing) =====
+        this.needs = {
+            hunger: 50,    // 0-100, 50 = neutral
+            energy: 100,   // Start day full energy
+            happiness: 50,
+            fitness: 50
+        };
+
+        // ===== v6.0: WORK QUALITY TRACKING =====
+        this.sessionStartDP = 0;
+        this.sessionQuotaStart = 0;
+        this.sessionAccuracy = 0;
+        this.workQualityScore = 0;
+
         // ===== CATEGORY SYSTEM =====
         this.categoryStats = { woe: 0, frolic: 0, dread: 0, malice: 0 };
         this.categories = {
@@ -148,13 +176,102 @@ class LumonMDRGame {
             { id: 'piano', icon: '🎹', name: 'Piano', cost: 30, owned: false, boost: 0.20 }
         ];
 
-        // ===== OUTIE ACTIVITIES =====
+        // ===== v6.0: OUTIE ACTIVITIES (avec timeCost + needs effects) =====
         this.activities = [
-            { id: 'gym', icon: '🏋️', name: 'Aller à la Salle de Sport', ftCost: 2, bonus: 'scan', value: 0.95, duration: 0 },
-            { id: 'dinner', icon: '🍽️', name: 'Dîner chez Ricken', ftCost: 3, bonus: 'power', value: 2, duration: 0 },
-            { id: 'date', icon: '💐', name: 'Rendez-vous Romantique', ftCost: 5, bonus: 'combo', value: 1.2, duration: 0 },
-            { id: 'therapy', icon: '🧘', name: 'Séance de Thérapie', ftCost: 4, bonus: 'passive', value: 1.1, duration: 0 },
-            { id: 'book', icon: '📖', name: 'Lire un Livre', ftCost: 1, bonus: 'cluster', value: 1, duration: 0 }
+            // MANGER (obligatoire)
+            {
+                id: 'fast_food',
+                icon: '🍔',
+                name: 'Fast Food',
+                timeCost: 0.5,
+                ftCost: 2,
+                effects: { hunger: 30, happiness: -5 },
+                description: '30min - Rapide mais pas top'
+            },
+            {
+                id: 'cuisiner',
+                icon: '🍳',
+                name: 'Cuisiner',
+                timeCost: 1,
+                ftCost: 4,
+                effects: { hunger: 60, happiness: 10 },
+                description: '1h - Bon repas maison'
+            },
+
+            // DÉTENTE (happiness)
+            {
+                id: 'tv',
+                icon: '📺',
+                name: 'Regarder TV',
+                timeCost: 1.5,
+                ftCost: 0,
+                effects: { happiness: 20, energy: -10 },
+                description: '1.5h - Divertissement basique'
+            },
+            {
+                id: 'netflix',
+                icon: '📺',
+                name: 'Netflix Binge',
+                timeCost: 2,
+                ftCost: 2,
+                effects: { happiness: 35 },
+                description: '2h - Séries et films',
+                requires: 'tv_tier_1'
+            },
+
+            // SPORT (fitness)
+            {
+                id: 'jogging',
+                icon: '🏃',
+                name: 'Jogging',
+                timeCost: 1,
+                ftCost: 0,
+                effects: { fitness: 15, energy: -15 },
+                description: '1h - Cardio basique'
+            },
+            {
+                id: 'gym',
+                icon: '🏋️',
+                name: 'Musculation',
+                timeCost: 2,
+                ftCost: 3,
+                effects: { fitness: 35, energy: -25, happiness: 10 },
+                description: '2h - Workout complet',
+                requires: 'gym_tier_1'
+            },
+
+            // SOCIAL (happiness)
+            {
+                id: 'cafe_amis',
+                icon: '☕',
+                name: 'Café avec Amis',
+                timeCost: 2,
+                ftCost: 5,
+                effects: { happiness: 40 },
+                description: '2h - Socialiser'
+            },
+
+            // REPOS
+            {
+                id: 'sieste',
+                icon: '😴',
+                name: 'Sieste (1h)',
+                timeCost: 1,
+                ftCost: 0,
+                effects: { energy: 30, fatigue: -20 },
+                description: '1h - Récupération rapide'
+            },
+
+            // SLEEP (special - ends day)
+            {
+                id: 'sleep',
+                icon: '🛌',
+                name: 'Dormir',
+                timeCost: 0,
+                ftCost: 0,
+                effects: { END_DAY: true },
+                description: 'Termine la journée'
+            }
         ];
 
         // Active bonuses from Outie
@@ -586,6 +703,10 @@ class LumonMDRGame {
 
         // ===== START GAME LOOP =====
         this.lastUpdate = Date.now();
+
+        // v6.0: Start day cycle
+        this.startDay();
+
         this.gameLoop();
     }
 
@@ -834,6 +955,9 @@ class LumonMDRGame {
     // ===== SORTING =====
     sortCluster(cluster, binCategory) {
         const now = Date.now();
+
+        // v6.0: Track active player action (for fatigue calculation)
+        this.lastActionTime = now;
 
         let totalReward = 0;
         let allCorrect = true;
@@ -1366,32 +1490,52 @@ class LumonMDRGame {
     }
 
     doActivity(activity) {
-        if (this.freeTime < activity.ftCost) return;
-
-        this.freeTime -= activity.ftCost;
-
-        // Apply temporary boost
-        switch(activity.bonus) {
-            case 'scan':
-                this.outieBonuses.scanSpeedMult = activity.value;
-                break;
-            case 'power':
-                this.outieBonuses.powerBonus = activity.value;
-                break;
-            case 'combo':
-                this.outieBonuses.comboMult = activity.value;
-                break;
-            case 'passive':
-                this.outieBonuses.passiveMult = activity.value;
-                this.calculatePassiveGeneration();
-                break;
-            case 'cluster':
-                this.outieBonuses.clusterBonus = activity.value;
-                break;
+        // v6.0: Check time budget
+        if (this.dayPhase === 'evening') {
+            if (this.eveningHours < activity.timeCost) {
+                this.showToast('⏰ Pas assez de temps restant!', true);
+                return;
+            }
         }
 
+        if (this.freeTime < activity.ftCost) {
+            this.showToast('💰 Pas assez de FT!', true);
+            return;
+        }
+
+        // Special case: Sleep ends day
+        if (activity.id === 'sleep') {
+            this.doSleep();
+            return;
+        }
+
+        // Consume resources
+        if (this.dayPhase === 'evening') {
+            this.eveningHours -= activity.timeCost;
+        }
+        this.freeTime -= activity.ftCost;
+
+        // Apply effects
+        if (activity.effects) {
+            for (const [key, value] of Object.entries(activity.effects)) {
+                if (key === 'fatigue') {
+                    this.fatigue = Math.max(0, this.fatigue + value);
+                } else if (this.needs.hasOwnProperty(key)) {
+                    this.needs[key] += value;
+                }
+            }
+            this.clampNeeds();
+        }
+
+        this.showNotification(`✓ ${activity.name} (-${activity.timeCost}h)`);
+        this.updateEveningClock();
         this.renderOutieUI();
-        this.showNotification(`✨ ${activity.name}`);
+
+        // Auto sleep if no time left
+        if (this.eveningHours <= 0) {
+            this.showNotification('⏰ Minuit! Il est temps de dormir.');
+            setTimeout(() => this.doSleep(), 2000);
+        }
     }
 
     switchShopTab(tabName) {
@@ -1490,6 +1634,206 @@ class LumonMDRGame {
         this.showNotification(`SEVERANCE: +${cpGained} CP`);
     }
 
+    // ===== v6.0: DAY CYCLE MANAGEMENT =====
+
+    startDay() {
+        this.dayPhase = 'work';
+        this.workStartTime = Date.now();
+        this.fatigue = 0;
+        this.sessionStartDP = this.dataPoints;
+        this.sessionQuotaStart = this.quotaProgress || 0;
+
+        // Auto switch to Innie
+        if (this.currentWorld !== 'innie') {
+            this.switchWorld('innie');
+        }
+
+        this.showNotification(`☀️ DAY ${this.currentDay} - 08:00 - Journée de travail commence`);
+        this.updateWorkClock();
+    }
+
+    updateWorkday(deltaTime) {
+        if (this.dayPhase !== 'work') return;
+
+        const workElapsed = Date.now() - this.workStartTime;
+        const workProgress = workElapsed / this.workDuration;
+
+        // Fatigue increase (faster if active, slower if AFK)
+        const isActive = this.isPlayerActive();
+        const fatigueRate = isActive ? 0.3 : 0.15; // per second
+        this.fatigue += fatigueRate * deltaTime;
+
+        // Fatigue cap
+        if (this.fatigue > this.maxFatigue) {
+            this.fatigue = this.maxFatigue;
+        }
+
+        // Check end conditions
+        if (this.fatigue >= this.maxFatigue) {
+            this.showNotification('😴 EXHAUSTION - Fatigue maximale atteinte');
+            this.endWorkday();
+        } else if (workElapsed >= this.workDuration) {
+            this.showNotification('🕔 17:00 - Fin de journée');
+            this.endWorkday();
+        }
+
+        this.updateWorkClock();
+    }
+
+    endWorkday() {
+        this.dayPhase = 'evening';
+
+        // Calculate Work Quality Score
+        this.workQualityScore = this.calculateWorkQuality();
+        const ftEarned = Math.floor(this.workQualityScore / 10); // 0-10 FT
+        this.freeTime += ftEarned;
+
+        // Needs decay from workday
+        this.needs.hunger -= 40;
+        this.needs.energy -= 30;
+        this.needs.happiness -= 20;
+
+        // Clamp needs
+        this.clampNeeds();
+
+        // Show workday summary
+        this.showWorkdaySummary(ftEarned);
+
+        // Switch to Outie after summary (3 seconds)
+        setTimeout(() => {
+            this.switchWorld('outie');
+            this.startEvening();
+        }, 3000);
+    }
+
+    calculateWorkQuality() {
+        const accuracy = this.totalRefined > 0 ? (this.correctSorts / this.totalRefined) * 100 : 0;
+        const quotaRatio = this.currentQuota > 0 ? (this.quotaProgress / this.currentQuota) : 0;
+        const comboScore = Math.min(100, this.maxCombo * 5);
+
+        const quality = (accuracy * 0.5) + (quotaRatio * 30) + (comboScore * 0.2);
+        return Math.min(100, quality);
+    }
+
+    showWorkdaySummary(ftEarned) {
+        const accuracy = this.totalRefined > 0 ? ((this.correctSorts / this.totalRefined) * 100).toFixed(1) : 0;
+        const quotaMet = this.quotaProgress >= this.currentQuota;
+
+        const summary = `
+🏢 FIN DE JOURNÉE
+
+📊 Performance:
+- Quota: ${this.quotaProgress} / ${this.currentQuota} ${quotaMet ? '✅' : '❌'}
+- Accuracy: ${accuracy}%
+- Max Combo: ×${this.maxCombo}
+
+💰 Récompense: +${ftEarned} FT
+😴 Fatigue: ${Math.floor(this.fatigue)}%
+
+Quality Score: ${Math.floor(this.workQualityScore)}/100
+        `;
+
+        this.showNotification(summary);
+    }
+
+    startEvening() {
+        this.eveningHours = 7; // 17h-00h
+        this.eveningStartTime = Date.now();
+
+        this.showNotification(`🏠 17:00 - Soirée libre (${this.eveningHours}h disponibles)`);
+        this.updateEveningClock();
+    }
+
+    doSleep() {
+        // Reset for next day
+        this.needs.energy = 100;
+        this.fatigue = 0;
+        this.needs.hunger = Math.max(30, this.needs.hunger - 20); // Wake up a bit hungry
+
+        this.currentDay++;
+        this.showNotification(`😴 Bonne nuit... Jour ${this.currentDay}`);
+
+        // Auto start next workday
+        setTimeout(() => {
+            this.startDay();
+        }, 2000);
+    }
+
+    updateWorkClock() {
+        // Calculate current work time (08:00 + elapsed)
+        if (!this.workStartTime) return;
+
+        const elapsed = Date.now() - this.workStartTime;
+        const hours = 8 + (elapsed / 3600000); // Start at 08:00
+        const displayHour = Math.floor(hours);
+        const displayMin = Math.floor((hours % 1) * 60);
+        const timeStr = `${String(displayHour).padStart(2, '0')}:${String(displayMin).padStart(2, '0')}`;
+
+        // Update UI if element exists
+        const clockEl = document.getElementById('workClock');
+        if (clockEl) {
+            clockEl.textContent = `⏰ ${timeStr} / 17:00`;
+        }
+    }
+
+    updateEveningClock() {
+        // Calculate current evening time (17:00 + spent hours)
+        const currentHour = 17 + (7 - this.eveningHours);
+        const displayTime = Math.floor(currentHour) + ':' +
+                            String(Math.floor((currentHour % 1) * 60)).padStart(2, '0');
+
+        const clockEl = document.getElementById('eveningClock');
+        if (clockEl) {
+            clockEl.textContent = `⏰ ${displayTime}`;
+            clockEl.style.color = this.eveningHours < 2 ? '#ff3366' : '#00ff41';
+        }
+
+        // Warning if late
+        if (this.eveningHours < 2 && this.eveningHours > 0) {
+            this.showToast('⚠️ Il se fait tard... pensez à dormir!');
+        }
+    }
+
+    isPlayerActive() {
+        // Consider active if last action was within 5 seconds
+        return (Date.now() - this.lastActionTime) < 5000;
+    }
+
+    clampNeeds() {
+        for (const key in this.needs) {
+            this.needs[key] = Math.max(0, Math.min(100, this.needs[key]));
+        }
+    }
+
+    getNeedMultiplier(value) {
+        // 0-25: Critical penalty (-50%)
+        if (value < 25) return 0.5;
+        // 25-50: Minor penalty (-20%)
+        if (value < 50) return 0.8;
+        // 50: Neutral
+        if (value === 50) return 1.0;
+        // 50-75: Bonus (+15%)
+        if (value < 75) return 1.15;
+        // 75-100: Major bonus (+30%)
+        return 1.3;
+    }
+
+    getInnieEfficiency() {
+        const hungerMult = this.getNeedMultiplier(this.needs.hunger);
+        const energyMult = this.getNeedMultiplier(this.needs.energy);
+        const fitnessMult = this.getNeedMultiplier(this.needs.fitness);
+        const happinessMult = this.getNeedMultiplier(this.needs.happiness);
+
+        // Fatigue penalty
+        let fatigueMult = 1.0;
+        if (this.fatigue >= 90) fatigueMult = 0.4;
+        else if (this.fatigue >= 70) fatigueMult = 0.65;
+        else if (this.fatigue >= 50) fatigueMult = 0.85;
+        else if (this.fatigue >= 30) fatigueMult = 0.95;
+
+        return hungerMult * energyMult * fitnessMult * happinessMult * fatigueMult;
+    }
+
     // ===== GAME LOOP =====
     gameLoop() {
         const now = Date.now();
@@ -1499,12 +1843,20 @@ class LumonMDRGame {
         // Track play time
         this.playTimeSeconds += deltaTime;
 
+        // v6.0: Update workday (fatigue, time tracking)
+        if (this.dayPhase === 'work') {
+            this.updateWorkday(deltaTime);
+        }
+
         // Generate Free Time
         this.freeTime += this.freeTimeGeneration * deltaTime;
 
-        // Passive generation
+        // v6.0: Apply Innie efficiency (needs + fatigue)
+        const efficiency = this.getInnieEfficiency();
+
+        // Passive generation (with efficiency multiplier)
         if (this.passiveGeneration > 0) {
-            this.dataPoints += this.passiveGeneration * deltaTime;
+            this.dataPoints += (this.passiveGeneration * deltaTime * efficiency);
         }
 
         // Only update game if in Innie world
