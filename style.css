@@ -288,6 +288,75 @@ body {
     text-align: center;
 }
 
+.day-tracker {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    padding: 12px 15px;
+    text-align: center;
+}
+
+.day-tracker h3 {
+    font-size: 0.95em;
+    color: var(--terminal-green);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.clock {
+    font-size: 0.9em;
+    color: var(--terminal-green);
+    text-shadow: 0 0 6px var(--terminal-glow);
+    letter-spacing: 1px;
+}
+
+.needs-panel {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    padding: 12px 15px;
+}
+
+.needs-panel h3 {
+    font-size: 0.9em;
+    color: var(--terminal-green);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.need-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.75em;
+    color: var(--terminal-green-dim);
+}
+
+.need-row > span {
+    flex: 0 0 60px;
+}
+
+.need-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--ui-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.need-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--terminal-green-dark), var(--terminal-green));
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.need-fill.fatigue {
+    background: linear-gradient(90deg, #ffdd33, #ff3366);
+}
+
 .stats-panel {
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid var(--ui-border);
@@ -1144,14 +1213,33 @@ body {
 @media (max-width: 1024px) {
     .game-container {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: auto auto 1fr;
     }
 
     .left-sidebar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        padding: 10px;
+        overflow-y: visible;
+    }
+
+    .left-sidebar .category-stats,
+    .left-sidebar .stats-panel {
         display: none;
     }
 
     .bins-area {
         grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .left-sidebar {
+        grid-template-columns: 1fr 1fr;
+    }
+    .needs-panel,
+    .day-tracker {
+        font-size: 0.85em;
     }
 }

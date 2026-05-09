@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lumon Industries - MDR Terminal</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 </head>
 <body>
     <div class="game-wrapper">
@@ -66,12 +65,45 @@
         <div class="game-container">
             <!-- LEFT SIDEBAR - Navigation & Info -->
             <aside class="left-sidebar">
+                <div class="day-tracker">
+                    <h3 id="dayLabel">📅 Jour 1</h3>
+                    <p id="workClock" class="clock">⏰ 08:00 / 17:00</p>
+                </div>
+
                 <div class="quota-tracker">
-                    <h3>📊 Quota Progress</h3>
+                    <h3>📊 Quota (niv. <span id="quotaLevel">0</span>)</h3>
                     <div class="quota-bar">
                         <div id="quotaFill" class="quota-fill" style="width: 0%"></div>
                     </div>
-                    <p id="quotaText" class="quota-text">0 / 1,000</p>
+                    <p id="quotaText" class="quota-text">0 / 500</p>
+                </div>
+
+                <div class="needs-panel">
+                    <h3>💚 État</h3>
+                    <div class="need-row">
+                        <span>Fatigue</span>
+                        <div class="need-bar"><div id="fatigueFill" class="need-fill fatigue"></div></div>
+                    </div>
+                    <div class="need-row">
+                        <span>Faim</span>
+                        <div class="need-bar"><div id="hungerFill" class="need-fill"></div></div>
+                    </div>
+                    <div class="need-row">
+                        <span>Énergie</span>
+                        <div class="need-bar"><div id="energyFill" class="need-fill"></div></div>
+                    </div>
+                    <div class="need-row">
+                        <span>Humeur</span>
+                        <div class="need-bar"><div id="happinessFill" class="need-fill"></div></div>
+                    </div>
+                    <div class="need-row">
+                        <span>Forme</span>
+                        <div class="need-bar"><div id="fitnessFill" class="need-fill"></div></div>
+                    </div>
+                    <div class="stat-row">
+                        <span>Efficacité:</span>
+                        <span id="efficiencyValue">100%</span>
+                    </div>
                 </div>
 
                 <div class="stats-panel">
@@ -196,6 +228,10 @@
                             <span class="tab-icon">🎨</span>
                             <span class="tab-label">O&D</span>
                         </button>
+                        <button class="shop-tab-btn" data-shop-tab="cp">
+                            <span class="tab-icon">🧠</span>
+                            <span class="tab-label">CP</span>
+                        </button>
                     </div>
                 </div>
 
@@ -226,6 +262,12 @@
                         <p class="tab-description">Optics & Design Tech Tree</p>
                         <div id="techTree" class="tech-tree"></div>
                     </div>
+
+                    <!-- TAB 4: CONFORMITY POINTS (Prestige) -->
+                    <div id="cpTab" class="shop-tab-content">
+                        <p class="tab-description">Bonus permanents (post-Severance)</p>
+                        <div id="cpUpgradesList" class="shop-list"></div>
+                    </div>
                 </div>
             </aside>
         </div>
@@ -234,6 +276,7 @@
         <div id="outieWorld" class="outie-world hidden">
             <div class="outie-header">
                 <h2>🏠 Temps Libre</h2>
+                <div id="eveningClock" class="clock">⏰ 17:00</div>
                 <div class="free-time-counter">
                     <span class="stat-icon">⏰</span>
                     <span>Free Time: <span id="freeTime">0</span> FT</span>

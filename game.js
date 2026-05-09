@@ -90,7 +90,8 @@ class LumonMDRGame {
         this.currentDay = 1;
         this.dayPhase = 'work'; // 'work' or 'evening'
         this.workStartTime = null;
-        this.workDuration = 8 * 3600000; // 8h en ms
+        // Real-time work session: 6 minutes maps visually to 08:00 → 17:00 game-clock
+        this.workDuration = 6 * 60 * 1000;
         this.eveningHours = 7; // 17h-00h = 7h disponibles
         this.eveningStartTime = null;
 
@@ -101,9 +102,10 @@ class LumonMDRGame {
         this.lastActionTime = 0;
 
         // ===== v6.0: NEEDS SYSTEM (Outie wellbeing) =====
+        // Start at 50 (neutral, ×1.0 multiplier) to avoid hidden buffs
         this.needs = {
-            hunger: 50,    // 0-100, 50 = neutral
-            energy: 100,   // Start day full energy
+            hunger: 50,
+            energy: 50,
             happiness: 50,
             fitness: 50
         };
@@ -148,9 +150,9 @@ class LumonMDRGame {
         };
 
         // ===== QUOTA SYSTEM =====
-        this.currentQuota = 500;
+        this.quotaLevel = 0;
         this.quotaProgress = 0;
-        this.quotaLevel = 1;
+        this.currentQuota = 500;
 
         // ===== AUTOMATION COUNTS =====
         this.identifierCount = 0;
@@ -195,28 +197,30 @@ class LumonMDRGame {
                 timeCost: 1,
                 ftCost: 4,
                 effects: { hunger: 60, happiness: 10 },
-                description: '1h - Bon repas maison'
+                innie: { powerBonus: 1 },
+                description: '1h - Bon repas maison (+1 power demain)'
             },
 
             // DÉTENTE (happiness)
             {
-                id: 'tv',
+                id: 'watch_tv',
                 icon: '📺',
                 name: 'Regarder TV',
                 timeCost: 1.5,
                 ftCost: 0,
                 effects: { happiness: 20, energy: -10 },
+                innie: { passiveMult: 1.05 },
                 description: '1.5h - Divertissement basique'
             },
             {
                 id: 'netflix',
-                icon: '📺',
+                icon: '🎬',
                 name: 'Netflix Binge',
                 timeCost: 2,
                 ftCost: 2,
                 effects: { happiness: 35 },
-                description: '2h - Séries et films',
-                requires: 'tv_tier_1'
+                innie: { passiveMult: 1.10 },
+                description: '2h - Séries et films'
             },
 
             // SPORT (fitness)
@@ -236,8 +240,8 @@ class LumonMDRGame {
                 timeCost: 2,
                 ftCost: 3,
                 effects: { fitness: 35, energy: -25, happiness: 10 },
-                description: '2h - Workout complet',
-                requires: 'gym_tier_1'
+                innie: { scanSpeedMult: 0.9 },
+                description: '2h - Workout complet (scan -10% demain)'
             },
 
             // SOCIAL (happiness)
@@ -248,7 +252,8 @@ class LumonMDRGame {
                 timeCost: 2,
                 ftCost: 5,
                 effects: { happiness: 40 },
-                description: '2h - Socialiser'
+                innie: { comboMult: 1.2 },
+                description: '2h - Socialiser (combos ×1.2 demain)'
             },
 
             // REPOS
@@ -259,7 +264,8 @@ class LumonMDRGame {
                 timeCost: 1,
                 ftCost: 0,
                 effects: { energy: 30, fatigue: -20 },
-                description: '1h - Récupération rapide'
+                innie: { clusterBonus: 1 },
+                description: '1h - Récupération (+1 cluster demain)'
             },
 
             // SLEEP (special - ends day)
@@ -303,39 +309,39 @@ class LumonMDRGame {
                 baseCost: 150,
                 baseProduction: 1,
                 count: 0,
-                costMultiplier: 1.13
+                costMultiplier: 1.15
             },
             {
                 id: 'identifier',
                 icon: '🔍',
                 name: 'Identifier Auto',
-                description: 'Scanne 1 numéro/2s',
+                description: 'Auto-identifie 0.5/sec',
                 baseCost: 500,
                 baseProduction: 5,
                 count: 0,
-                costMultiplier: 1.13,
+                costMultiplier: 1.20,
                 special: 'identifier'
             },
             {
                 id: 'sorter',
-                icon: '📊',
+                icon: '📦',
                 name: 'Sorter Auto',
-                description: 'Trie 1 numéro/3s',
-                baseCost: 200,
-                baseProduction: 1,
+                description: 'Auto-trie 0.5/sec',
+                baseCost: 2000,
+                baseProduction: 20,
                 count: 0,
-                costMultiplier: 1.13,
+                costMultiplier: 1.25,
                 special: 'sorter'
             },
             {
                 id: 'macro',
-                icon: '⚙️',
+                icon: '🤖',
                 name: 'Macro Complet',
-                description: 'Scan + Tri auto',
-                baseCost: 750,
-                baseProduction: 3,
+                description: 'Scan + Tri 0.8/sec',
+                baseCost: 10000,
+                baseProduction: 100,
                 count: 0,
-                costMultiplier: 1.13,
+                costMultiplier: 1.30,
                 special: 'macro'
             },
             {
@@ -343,30 +349,30 @@ class LumonMDRGame {
                 icon: '☕',
                 name: 'Machine à Café',
                 description: 'Booste département',
-                baseCost: 2000,
-                baseProduction: 8,
+                baseCost: 25000,
+                baseProduction: 250,
                 count: 0,
-                costMultiplier: 1.13
+                costMultiplier: 1.32
             },
             {
                 id: 'irving',
                 icon: '🖥️',
                 name: 'Serveur d\'Irving',
                 description: 'Traitement parallèle',
-                baseCost: 10000,
-                baseProduction: 40,
+                baseCost: 100000,
+                baseProduction: 800,
                 count: 0,
-                costMultiplier: 1.13
+                costMultiplier: 1.34
             },
             {
                 id: 'cobel',
                 icon: '👁️',
                 name: 'Mrs. Cobel',
                 description: 'Supervision totale',
-                baseCost: 50000,
-                baseProduction: 200,
+                baseCost: 500000,
+                baseProduction: 3500,
                 count: 0,
-                costMultiplier: 1.13
+                costMultiplier: 1.36
             }
         ];
 
@@ -652,9 +658,6 @@ class LumonMDRGame {
             }
         ];
 
-        // ===== TUTORIAL =====
-        this.tutorialComplete = false;
-
         // ===== AUTOMATION FEEDBACK =====
         this.identifierFeedbackAccum = 0;
         this.sorterFeedbackAccum = 0;
@@ -682,9 +685,19 @@ class LumonMDRGame {
             maliceCount: document.getElementById('maliceCount'),
             quotaFill: document.getElementById('quotaFill'),
             quotaText: document.getElementById('quotaText'),
+            quotaLevel: document.getElementById('quotaLevel'),
             terminalLoad: document.getElementById('terminalLoad'),
             severanceBtn: document.getElementById('severanceBtn'),
-            freeTime: document.getElementById('freeTime')
+            freeTime: document.getElementById('freeTime'),
+            dayLabel: document.getElementById('dayLabel'),
+            workClock: document.getElementById('workClock'),
+            eveningClock: document.getElementById('eveningClock'),
+            efficiencyValue: document.getElementById('efficiencyValue'),
+            fatigueFill: document.getElementById('fatigueFill'),
+            hungerFill: document.getElementById('hungerFill'),
+            energyFill: document.getElementById('energyFill'),
+            happinessFill: document.getElementById('happinessFill'),
+            fitnessFill: document.getElementById('fitnessFill')
         };
 
         this.resizeCanvas();
@@ -697,17 +710,141 @@ class LumonMDRGame {
         // ===== INITIALIZE =====
         this.initializeGrid();
         this.bindEvents();
+        this.load();
         this.initializeUI();
         this.renderShop();
+        this.renderCPShop();
         this.renderOutieUI();
+
+        // Autosave
+        this.saveInterval = setInterval(() => this.save(), 10000);
+        window.addEventListener('beforeunload', () => this.save());
 
         // ===== START GAME LOOP =====
         this.lastUpdate = Date.now();
 
-        // v6.0: Start day cycle
-        this.startDay();
+        // v6.0: Start day cycle (only if no day in progress from save)
+        if (!this.workStartTime) {
+            this.startDay();
+        } else {
+            this.updateWorkClock();
+        }
 
         this.gameLoop();
+    }
+
+    // ===== SAVE / LOAD =====
+    save() {
+        try {
+            const data = {
+                version: '6.0',
+                dataPoints: this.dataPoints,
+                conformityPoints: this.conformityPoints,
+                freeTime: this.freeTime,
+                activePower: this.activePower,
+                scanSpeed: this.scanSpeed,
+                scanRadius: this.scanRadius,
+                scanZoneLevel: this.scanZoneLevel,
+                clusterSize: this.clusterSize,
+                respawnTime: this.respawnTime,
+                comboDecayTime: this.comboDecayTime,
+                identifierCount: this.identifierCount,
+                sorterCount: this.sorterCount,
+                macroCount: this.macroCount,
+                totalRefined: this.totalRefined,
+                correctSorts: this.correctSorts,
+                incorrectSorts: this.incorrectSorts,
+                maxCombo: this.maxCombo,
+                playTimeSeconds: this.playTimeSeconds,
+                quotaLevel: this.quotaLevel,
+                quotaProgress: this.quotaProgress,
+                currentQuota: this.currentQuota,
+                currentDay: this.currentDay,
+                fatigue: this.fatigue,
+                needs: { ...this.needs },
+                categoryStats: { ...this.categoryStats },
+                departmentCounts: this.departmentItems.reduce((acc, i) => {
+                    acc[i.id] = i.count;
+                    return acc;
+                }, {}),
+                activeUpgrades: this.activeUpgrades.filter(u => u.purchased).map(u => u.id),
+                synergyUpgrades: this.synergyUpgrades.filter(u => u.purchased).map(u => u.id),
+                techTree: this.techTree.filter(u => u.purchased).map(u => u.id),
+                cpUpgrades: this.cpUpgrades.filter(u => u.purchased).map(u => u.id),
+                ownedHousing: this.housingItems.filter(h => h.owned).map(h => h.id),
+                outieBonuses: { ...this.outieBonuses },
+                timestamp: Date.now()
+            };
+            localStorage.setItem('lumonMDR', JSON.stringify(data));
+        } catch (e) {
+            console.warn('Save failed:', e);
+        }
+    }
+
+    load() {
+        try {
+            const raw = localStorage.getItem('lumonMDR');
+            if (!raw) return;
+            const data = JSON.parse(raw);
+
+            const num = (v, fallback = 0) => typeof v === 'number' && isFinite(v) ? v : fallback;
+
+            this.dataPoints = num(data.dataPoints);
+            this.conformityPoints = num(data.conformityPoints);
+            this.freeTime = num(data.freeTime);
+            this.activePower = num(data.activePower, 1);
+            this.scanSpeed = num(data.scanSpeed, GAME_CONSTANTS.SCAN_SPEED_INITIAL);
+            this.scanRadius = num(data.scanRadius, GAME_CONSTANTS.SCAN_RADIUS_INITIAL);
+            this.scanZoneLevel = num(data.scanZoneLevel, 1);
+            this.clusterSize = num(data.clusterSize, 1);
+            this.respawnTime = num(data.respawnTime, GAME_CONSTANTS.RESPAWN_TIME_MS);
+            this.comboDecayTime = num(data.comboDecayTime, GAME_CONSTANTS.COMBO_DECAY_MS);
+            this.identifierCount = num(data.identifierCount);
+            this.sorterCount = num(data.sorterCount);
+            this.macroCount = num(data.macroCount);
+            this.totalRefined = num(data.totalRefined);
+            this.correctSorts = num(data.correctSorts);
+            this.incorrectSorts = num(data.incorrectSorts);
+            this.maxCombo = num(data.maxCombo);
+            this.playTimeSeconds = num(data.playTimeSeconds);
+            this.quotaLevel = num(data.quotaLevel);
+            this.quotaProgress = num(data.quotaProgress);
+            this.currentQuota = num(data.currentQuota, 500);
+            this.currentDay = num(data.currentDay, 1);
+            this.fatigue = num(data.fatigue);
+
+            if (data.needs) Object.assign(this.needs, data.needs);
+            if (data.categoryStats) Object.assign(this.categoryStats, data.categoryStats);
+            if (data.outieBonuses) Object.assign(this.outieBonuses, data.outieBonuses);
+
+            if (data.departmentCounts) {
+                this.departmentItems.forEach(item => {
+                    item.count = num(data.departmentCounts[item.id]);
+                });
+            }
+            const restoreFlags = (list, ids) => {
+                if (!ids) return;
+                const set = new Set(ids);
+                list.forEach(u => { u.purchased = set.has(u.id); });
+            };
+            restoreFlags(this.activeUpgrades, data.activeUpgrades);
+            restoreFlags(this.synergyUpgrades, data.synergyUpgrades);
+            restoreFlags(this.techTree, data.techTree);
+            restoreFlags(this.cpUpgrades, data.cpUpgrades);
+
+            if (data.ownedHousing) {
+                const owned = new Set(data.ownedHousing);
+                this.housingItems.forEach(h => { h.owned = owned.has(h.id); });
+            }
+
+            this.calculatePassiveGeneration();
+        } catch (e) {
+            console.warn('Load failed:', e);
+        }
+    }
+
+    resetSave() {
+        try { localStorage.removeItem('lumonMDR'); } catch (e) {}
     }
 
     // ===== GRID INITIALIZATION =====
@@ -736,7 +873,7 @@ class LumonMDRGame {
             }
         }
 
-        const toFill = Math.floor(this.allCells.length * 0.6);
+        const toFill = Math.floor(this.allCells.length * GAME_CONSTANTS.GRID_FILL_RATIO);
         for (let i = 0; i < toFill; i++) {
             this.spawnNumberAtRandomPosition();
         }
@@ -935,10 +1072,7 @@ class LumonMDRGame {
 
     getNeighbors(gridX, gridY) {
         const neighbors = [];
-        const directions = [
-            [-1, 0], [1, 0], [0, -1], [0, 1],
-            [-1, -1], [-1, 1], [1, -1], [1, 1]
-        ];
+        const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
         for (const [dx, dy] of directions) {
             const nx = gridX + dx;
@@ -1008,17 +1142,23 @@ class LumonMDRGame {
                 this.maxCombo = this.currentCombo;
             }
 
+            // Base auto combo: +5% per combo level (capped at +200%)
+            comboBonus = 1 + Math.min(40, this.currentCombo) * 0.05;
+
+            // Tiered upgrade overrides apply on top of base
             const combo3 = this.synergyUpgrades.find(u => u.id === 'combo3');
             const combo2 = this.synergyUpgrades.find(u => u.id === 'combo2');
             const combo1 = this.synergyUpgrades.find(u => u.id === 'combo1');
 
+            let tier = 1;
             if (combo3 && combo3.purchased && this.currentCombo >= 10) {
-                comboBonus = 5;
+                tier = 5;
             } else if (combo2 && combo2.purchased && this.currentCombo >= 5) {
-                comboBonus = 3;
+                tier = 3;
             } else if (combo1 && combo1.purchased && this.currentCombo >= 3) {
-                comboBonus = 2;
+                tier = 2;
             }
+            comboBonus *= tier;
 
             comboBonus *= this.outieBonuses.comboMult;
 
@@ -1051,6 +1191,14 @@ class LumonMDRGame {
         if (allCorrect && totalReward > 0) {
             this.dataPoints += totalReward;
             this.quotaProgress += totalReward;
+
+            while (this.quotaProgress >= this.currentQuota) {
+                this.quotaProgress -= this.currentQuota;
+                this.quotaLevel++;
+                this.currentQuota = Math.floor(500 * Math.pow(1.5, this.quotaLevel));
+                this.canAccessOutie = true;
+                this.showNotification(`🎯 Quota niveau ${this.quotaLevel} atteint !`);
+            }
 
             let message = `+${totalReward} DP`;
             if (cluster.length > 1) {
@@ -1198,11 +1346,6 @@ class LumonMDRGame {
             }
         }
 
-        // Also trigger on milestones
-        if (this.quotaProgress >= this.currentQuota && !this.canAccessOutie) {
-            this.canAccessOutie = true;
-            this.showNotification('🎯 Quota atteint ! Temps libre disponible');
-        }
     }
 
     // ===== SHOP SYSTEM (FIXED) =====
@@ -1444,19 +1587,20 @@ class LumonMDRGame {
             activitiesContainer.innerHTML = '';
             this.activities.forEach(activity => {
                 const affordable = this.freeTime >= activity.ftCost;
+                const isSleep = activity.id === 'sleep';
 
                 const div = document.createElement('div');
-                div.className = `activity-card ${affordable ? 'affordable' : ''}`;
+                div.className = `activity-card ${affordable ? 'affordable' : ''} ${isSleep ? 'sleep-card' : ''}`;
+                const btnLabel = isSleep
+                    ? '😴 DORMIR'
+                    : (activity.ftCost > 0 ? `${activity.ftCost} FT` : 'GRATUIT');
                 div.innerHTML = `
                     <h3>${activity.icon} ${activity.name}</h3>
                     <p>${this.getActivityDescription(activity)}</p>
-                    <button class="activity-btn">
-                        ${activity.ftCost} FT
-                    </button>
+                    <button class="activity-btn">${btnLabel}</button>
                 `;
 
                 const btn = div.querySelector('button');
-                // IMPORTANT: Set disabled as JS property, not HTML attribute
                 btn.disabled = !affordable;
                 btn.addEventListener('click', () => this.doActivity(activity));
                 activitiesContainer.appendChild(div);
@@ -1465,14 +1609,19 @@ class LumonMDRGame {
     }
 
     getActivityDescription(activity) {
-        const descriptions = {
-            'gym': 'Scan 5% plus rapide (temporaire)',
-            'dinner': '+2 Puissance active (temporaire)',
-            'date': 'Combos +20% (temporaire)',
-            'therapy': 'Production passive +10% (temporaire)',
-            'book': '+1 Taille cluster (temporaire)'
+        if (activity.description) return activity.description;
+        if (!activity.effects) return '';
+        const labels = {
+            hunger: 'Faim',
+            energy: 'Énergie',
+            happiness: 'Humeur',
+            fitness: 'Forme',
+            fatigue: 'Fatigue'
         };
-        return descriptions[activity.id] || activity.bonus;
+        return Object.entries(activity.effects)
+            .filter(([k]) => labels[k])
+            .map(([k, v]) => `${labels[k]} ${v > 0 ? '+' : ''}${v}`)
+            .join(' · ');
     }
 
     purchaseHousing(item) {
@@ -1527,6 +1676,19 @@ class LumonMDRGame {
             this.clampNeeds();
         }
 
+        // Apply Innie bonuses (persist into next workday, reset at next evening)
+        if (activity.innie) {
+            for (const [key, value] of Object.entries(activity.innie)) {
+                if (!(key in this.outieBonuses)) continue;
+                if (key === 'powerBonus' || key === 'clusterBonus') {
+                    this.outieBonuses[key] += value;
+                } else {
+                    this.outieBonuses[key] *= value;
+                }
+            }
+            this.calculatePassiveGeneration();
+        }
+
         this.showNotification(`✓ ${activity.name} (-${activity.timeCost}h)`);
         this.updateEveningClock();
         this.renderOutieUI();
@@ -1573,34 +1735,44 @@ class LumonMDRGame {
             gameContainer.style.display = 'grid';
             outieWorld.classList.add('hidden');
 
-            // FIXED v5.0: Reset activity bonuses when returning to Innie
-            const housingBonus = this.housingItems
-                .filter(h => h.owned)
-                .reduce((sum, h) => sum + h.boost, 0);
-
-            this.outieBonuses = {
-                scanSpeedMult: 1,
-                powerBonus: 0,
-                comboMult: 1,
-                passiveMult: 1 + housingBonus, // Keep permanent housing bonuses
-                clusterBonus: 0
-            };
-
-            this.calculatePassiveGeneration();
-
             // Reset for next time
             this.canAccessOutie = false;
             this.lastOutieTime = this.playTimeSeconds;
         }
     }
 
-    performSeverance() {
-        if (this.dataPoints < 100000) return;
+    resetEveningBonuses() {
+        // Reset activity bonuses, keep permanent housing bonuses
+        const housingBonus = this.housingItems
+            .filter(h => h.owned)
+            .reduce((sum, h) => sum + h.boost, 0);
 
-        const cpGained = Math.floor(this.dataPoints / 10000);
+        this.outieBonuses = {
+            scanSpeedMult: 1,
+            powerBonus: 0,
+            comboMult: 1,
+            passiveMult: 1 + housingBonus,
+            clusterBonus: 0
+        };
+
+        this.calculatePassiveGeneration();
+    }
+
+    performSeverance() {
+        if (this.dataPoints < GAME_CONSTANTS.SEVERANCE_THRESHOLD) return;
+
+        const cpGained = Math.floor(this.dataPoints / GAME_CONSTANTS.SEVERANCE_CP_RATIO);
+        const ok = window.confirm(
+            `SEVERANCE RESET\n\nVous gagnerez ${cpGained} Conformity Points permanents.\n` +
+            `Tous les Data Points, départements et upgrades temporaires seront perdus.\n` +
+            `Le housing et les CP sont conservés.\n\nContinuer ?`
+        );
+        if (!ok) return;
+
         this.conformityPoints += cpGained;
 
         this.dataPoints = 0;
+        this.gridRows = GAME_CONSTANTS.GRID_ROWS;
         this.initializeGrid();
         this.departmentItems.forEach(item => item.count = 0);
         this.activeUpgrades.forEach(up => up.purchased = false);
@@ -1608,30 +1780,48 @@ class LumonMDRGame {
         this.techTree.forEach(up => up.purchased = false);
 
         this.activePower = 1;
-        this.scanSpeed = 2000;
-        this.scanRadius = 25;
+        this.scanSpeed = GAME_CONSTANTS.SCAN_SPEED_INITIAL;
+        this.scanRadius = GAME_CONSTANTS.SCAN_RADIUS_INITIAL;
         this.scanZoneLevel = 1;
         this.clusterSize = 1;
-        this.respawnTime = 1500;
+        this.respawnTime = GAME_CONSTANTS.RESPAWN_TIME_MS;
+        this.comboDecayTime = GAME_CONSTANTS.COMBO_DECAY_MS;
         this.identifierCount = 0;
         this.sorterCount = 0;
         this.macroCount = 0;
         this.currentCombo = 0;
         this.maxCombo = 0;
 
-        // Reset Outie bonuses
+        // Quota / day cycle reset
+        this.quotaLevel = 0;
+        this.quotaProgress = 0;
+        this.currentQuota = 500;
+        this.currentDay = 1;
+        this.fatigue = 0;
+        this.needs = { hunger: 50, energy: 50, happiness: 50, fitness: 50 };
+
+        // Reset Outie bonuses (housing kept)
+        const housingBonus = this.housingItems
+            .filter(h => h.owned)
+            .reduce((sum, h) => sum + h.boost, 0);
         this.outieBonuses = {
             scanSpeedMult: 1,
             powerBonus: 0,
             comboMult: 1,
-            passiveMult: 1,
+            passiveMult: 1 + housingBonus,
             clusterBonus: 0
         };
 
+        // Reapply CP permanent bonuses
+        this.applyCPBonuses();
+
         this.calculatePassiveGeneration();
         this.renderShop();
+        this.renderCPShop();
+        this.startDay();
 
         this.showNotification(`SEVERANCE: +${cpGained} CP`);
+        this.save();
     }
 
     // ===== v6.0: DAY CYCLE MANAGEMENT =====
@@ -1692,6 +1882,7 @@ class LumonMDRGame {
         this.needs.hunger -= 40;
         this.needs.energy -= 30;
         this.needs.happiness -= 20;
+        this.needs.fitness -= 15;
 
         // Clamp needs
         this.clampNeeds();
@@ -1700,6 +1891,7 @@ class LumonMDRGame {
         this.showWorkdaySummary(ftEarned);
 
         // Switch to Outie after summary (3 seconds)
+        this.canAccessOutie = true;
         setTimeout(() => {
             this.switchWorld('outie');
             this.startEvening();
@@ -1740,15 +1932,19 @@ Quality Score: ${Math.floor(this.workQualityScore)}/100
         this.eveningHours = 7; // 17h-00h
         this.eveningStartTime = Date.now();
 
+        // Reset previous evening's activity bonuses; player must spend FT again
+        this.resetEveningBonuses();
+
         this.showNotification(`🏠 17:00 - Soirée libre (${this.eveningHours}h disponibles)`);
         this.updateEveningClock();
     }
 
     doSleep() {
-        // Reset for next day
-        this.needs.energy = 100;
+        // Reset for next day: full energy, but slightly hungry on wake
+        this.needs.energy = 90;
         this.fatigue = 0;
-        this.needs.hunger = Math.max(30, this.needs.hunger - 20); // Wake up a bit hungry
+        this.needs.hunger = Math.max(20, this.needs.hunger - 25);
+        this.clampNeeds();
 
         this.currentDay++;
         this.showNotification(`😴 Bonne nuit... Jour ${this.currentDay}`);
@@ -1760,38 +1956,37 @@ Quality Score: ${Math.floor(this.workQualityScore)}/100
     }
 
     updateWorkClock() {
-        // Calculate current work time (08:00 + elapsed)
         if (!this.workStartTime) return;
 
-        const elapsed = Date.now() - this.workStartTime;
-        const hours = 8 + (elapsed / 3600000); // Start at 08:00
+        const elapsed = Math.min(this.workDuration, Date.now() - this.workStartTime);
+        const progress = elapsed / this.workDuration;
+        const hours = 8 + progress * 9; // 08:00 → 17:00
         const displayHour = Math.floor(hours);
         const displayMin = Math.floor((hours % 1) * 60);
         const timeStr = `${String(displayHour).padStart(2, '0')}:${String(displayMin).padStart(2, '0')}`;
 
-        // Update UI if element exists
-        const clockEl = document.getElementById('workClock');
-        if (clockEl) {
-            clockEl.textContent = `⏰ ${timeStr} / 17:00`;
+        if (this.dom.workClock) {
+            this.dom.workClock.textContent = `⏰ ${timeStr} / 17:00`;
         }
     }
 
     updateEveningClock() {
-        // Calculate current evening time (17:00 + spent hours)
-        const currentHour = 17 + (7 - this.eveningHours);
-        const displayTime = Math.floor(currentHour) + ':' +
+        // 17:00 + hours spent
+        const currentHour = (17 + (7 - this.eveningHours)) % 24;
+        const displayTime = String(Math.floor(currentHour)).padStart(2, '0') + ':' +
                             String(Math.floor((currentHour % 1) * 60)).padStart(2, '0');
 
-        const clockEl = document.getElementById('eveningClock');
+        const clockEl = this.dom.eveningClock || document.getElementById('eveningClock');
         if (clockEl) {
             clockEl.textContent = `⏰ ${displayTime}`;
             clockEl.style.color = this.eveningHours < 2 ? '#ff3366' : '#00ff41';
         }
 
-        // Warning if late
-        if (this.eveningHours < 2 && this.eveningHours > 0) {
+        if (this.eveningHours < 2 && this.eveningHours > 0 && !this._lateWarned) {
             this.showToast('⚠️ Il se fait tard... pensez à dormir!');
+            this._lateWarned = true;
         }
+        if (this.eveningHours >= 3) this._lateWarned = false;
     }
 
     isPlayerActive() {
@@ -1806,16 +2001,12 @@ Quality Score: ${Math.floor(this.workQualityScore)}/100
     }
 
     getNeedMultiplier(value) {
-        // 0-25: Critical penalty (-50%)
-        if (value < 25) return 0.5;
-        // 25-50: Minor penalty (-20%)
-        if (value < 50) return 0.8;
-        // 50: Neutral
-        if (value === 50) return 1.0;
-        // 50-75: Bonus (+15%)
-        if (value < 75) return 1.15;
-        // 75-100: Major bonus (+30%)
-        return 1.3;
+        // Smooth curve: 0 → 0.7, 50 → 1.0, 100 → 1.2
+        // Avoids stacking 4 needs into a 0.16× cliff
+        if (value <= 0) return 0.7;
+        if (value >= 100) return 1.2;
+        if (value <= 50) return 0.7 + (value / 50) * 0.3;
+        return 1.0 + ((value - 50) / 50) * 0.2;
     }
 
     getInnieEfficiency() {
@@ -2001,6 +2192,23 @@ Quality Score: ${Math.floor(this.workQualityScore)}/100
         const quotaPercent = Math.min(100, (this.quotaProgress / this.currentQuota) * 100);
         this.dom.quotaFill.style.width = quotaPercent + '%';
         this.dom.quotaText.textContent = `${this.formatNumber(this.quotaProgress)} / ${this.formatNumber(this.currentQuota)}`;
+        if (this.dom.quotaLevel) this.dom.quotaLevel.textContent = this.quotaLevel;
+
+        // Day / clock / fatigue / needs
+        if (this.dom.dayLabel) {
+            const phaseLabel = this.dayPhase === 'work' ? '🏢' : '🏠';
+            this.dom.dayLabel.textContent = `${phaseLabel} Jour ${this.currentDay}`;
+        }
+        if (this.dom.fatigueFill) {
+            this.dom.fatigueFill.style.width = Math.min(100, this.fatigue) + '%';
+        }
+        if (this.dom.hungerFill) this.dom.hungerFill.style.width = this.needs.hunger + '%';
+        if (this.dom.energyFill) this.dom.energyFill.style.width = this.needs.energy + '%';
+        if (this.dom.happinessFill) this.dom.happinessFill.style.width = this.needs.happiness + '%';
+        if (this.dom.fitnessFill) this.dom.fitnessFill.style.width = this.needs.fitness + '%';
+        if (this.dom.efficiencyValue) {
+            this.dom.efficiencyValue.textContent = Math.round(this.getInnieEfficiency() * 100) + '%';
+        }
 
         const filled = this.allCells.filter(c => !c.isEmpty).length;
         this.dom.terminalLoad.textContent = `Load: ${filled}/${this.allCells.length}`;
@@ -2042,7 +2250,7 @@ Quality Score: ${Math.floor(this.workQualityScore)}/100
             cards.forEach((card, index) => {
                 if (index < this.activities.length) {
                     const activity = this.activities[index];
-                    const affordable = this.freeTime >= activity.ftCost;
+                    const affordable = activity.id === 'sleep' || this.freeTime >= activity.ftCost;
                     const btn = card.querySelector('button');
                     if (btn) {
                         btn.disabled = !affordable;
@@ -2076,9 +2284,10 @@ Quality Score: ${Math.floor(this.workQualityScore)}/100
         this.updateUpgradeButtons('activeUpgradesList', this.activeUpgrades);
         this.updateUpgradeButtons('synergyUpgradesList', this.synergyUpgrades);
         this.updateUpgradeButtons('techTree', this.techTree);
+        this.updateUpgradeButtons('cpUpgradesList', this.cpUpgrades, true);
     }
 
-    updateUpgradeButtons(containerId, upgrades) {
+    updateUpgradeButtons(containerId, upgrades, useCP = false) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
@@ -2088,7 +2297,8 @@ Quality Score: ${Math.floor(this.workQualityScore)}/100
         items.forEach((item, index) => {
             if (index < visibleUpgrades.length) {
                 const upgrade = visibleUpgrades[index];
-                const affordable = this.dataPoints >= upgrade.cost;
+                const currency = useCP ? this.conformityPoints : this.dataPoints;
+                const affordable = currency >= upgrade.cost;
                 const btn = item.querySelector('button');
                 if (btn) {
                     btn.disabled = !affordable;
