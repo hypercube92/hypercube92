@@ -1,7 +1,40 @@
 // ==================================================
-// LUMON INDUSTRIES - MDR TERMINAL v4.1
-// Macrodata Refinement Simulation - BUGFIXES + OUTIE
+// LUMON INDUSTRIES - MDR TERMINAL v5.0
+// THE ULTIMATE UPDATE - La Plus Grande Mise à Jour
 // ==================================================
+
+// ===== CONSTANTS =====
+const GAME_CONSTANTS = {
+    // Grid
+    GRID_COLS: 10,
+    GRID_ROWS: 20,
+    GRID_FILL_RATIO: 0.6,
+
+    // Scan
+    SCAN_SPEED_INITIAL: 2000,
+    SCAN_RADIUS_INITIAL: 25,
+
+    // Combo
+    COMBO_DECAY_MS: 6000, // Increased from 4000 to 6000
+
+    // Respawn
+    RESPAWN_TIME_MS: 1500,
+
+    // Automation Rates (per second)
+    IDENTIFIER_RATE: 0.5,
+    SORTER_RATE: 0.5, // Increased from 0.33
+    MACRO_RATE: 0.8,
+
+    // Currency Generation
+    FREE_TIME_PER_SEC: 0.025, // Increased from 0.016 (~1.5 FT/min)
+
+    // Outie
+    OUTIE_TIME_INTERVAL: 120, // 2 minutes
+
+    // Severance
+    SEVERANCE_THRESHOLD: 100000,
+    SEVERANCE_CP_RATIO: 10000
+};
 
 class LumonMDRGame {
     constructor() {
@@ -9,7 +42,7 @@ class LumonMDRGame {
         this.dataPoints = 0;
         this.conformityPoints = 0;
         this.freeTime = 0;
-        this.freeTimeGeneration = 0.016; // ~1 FT/minute
+        this.freeTimeGeneration = GAME_CONSTANTS.FREE_TIME_PER_SEC;
 
         // ===== PASSIVE vs ACTIVE GENERATION =====
         this.passiveGeneration = 0;
@@ -28,21 +61,21 @@ class LumonMDRGame {
         this.outieNotificationShown = false;
 
         // ===== GRID SYSTEM =====
-        this.gridCols = 10;
-        this.gridRows = 20;
+        this.gridCols = GAME_CONSTANTS.GRID_COLS;
+        this.gridRows = GAME_CONSTANTS.GRID_ROWS;
         this.grid = [];
         this.allCells = [];
 
         // ===== SCAN MECHANICS =====
-        this.scanSpeed = 2000;
-        this.scanRadius = 25; // VERY SMALL - barely covers 1 number
+        this.scanSpeed = GAME_CONSTANTS.SCAN_SPEED_INITIAL;
+        this.scanRadius = GAME_CONSTANTS.SCAN_RADIUS_INITIAL;
         this.scanZoneLevel = 1;
 
         // ===== CLUSTER MECHANICS =====
         this.clusterSize = 1;
 
         // ===== RESPAWN MECHANICS =====
-        this.respawnTime = 1500;
+        this.respawnTime = GAME_CONSTANTS.RESPAWN_TIME_MS;
         this.emptySlots = [];
 
         // ===== COMBO SYSTEM =====
@@ -51,7 +84,7 @@ class LumonMDRGame {
         this.comboTimer = null;
         this.lastDropCategory = null;
         this.lastDropTime = 0;
-        this.comboDecayTime = 4000;
+        this.comboDecayTime = GAME_CONSTANTS.COMBO_DECAY_MS;
 
         // ===== CATEGORY SYSTEM =====
         this.categoryStats = { woe: 0, frolic: 0, dread: 0, malice: 0 };
@@ -59,26 +92,30 @@ class LumonMDRGame {
             woe: {
                 ranges: [[1, 25], [666, 669]],
                 color: '#ff3366',
-                multiplier: 1.5,
-                name: 'WOE'
+                multiplier: 1.6, // Increased from 1.5
+                name: 'WOE',
+                lore: 'Tristesse et mélancolie. Ces nombres portent le poids des regrets.'
             },
             frolic: {
                 ranges: [[26, 50], [100, 111]],
                 color: '#ffdd33',
-                multiplier: 1.3,
-                name: 'FROLIC'
+                multiplier: 1.5, // Increased from 1.3
+                name: 'FROLIC',
+                lore: 'Joie et légèreté. L\'essence du bonheur innocent.'
             },
             dread: {
                 ranges: [[51, 75], [200, 222]],
                 color: '#9933ff',
-                multiplier: 2.0,
-                name: 'DREAD'
+                multiplier: 1.8, // Decreased from 2.0
+                name: 'DREAD',
+                lore: 'Peur et angoisse. Ce qui nous terrasse dans l\'ombre.'
             },
             malice: {
                 ranges: [[76, 99], [300, 333]],
                 color: '#ff8800',
-                multiplier: 1.8,
-                name: 'MALICE'
+                multiplier: 1.7, // Decreased from 1.8
+                name: 'MALICE',
+                lore: 'Colère et rancœur. La flamme de la vengeance.'
             }
         };
 
@@ -142,12 +179,22 @@ class LumonMDRGame {
                 costMultiplier: 1.13
             },
             {
+                id: 'analyste',
+                icon: '📊',
+                name: 'Analyste',
+                description: 'Génère 1 DP/sec',
+                baseCost: 150,
+                baseProduction: 1,
+                count: 0,
+                costMultiplier: 1.13
+            },
+            {
                 id: 'identifier',
                 icon: '🔍',
                 name: 'Identifier Auto',
                 description: 'Scanne 1 numéro/2s',
-                baseCost: 75,
-                baseProduction: 0.5,
+                baseCost: 500,
+                baseProduction: 5,
                 count: 0,
                 costMultiplier: 1.13,
                 special: 'identifier'
@@ -444,9 +491,85 @@ class LumonMDRGame {
             }
         ];
 
+        // ===== CONFORMITY POINTS SHOP =====
+        this.cpUpgrades = [
+            {
+                id: 'cp1',
+                icon: '💎',
+                name: 'Démarrage Rapide',
+                description: 'Commencer chaque session avec 1000 DP',
+                cost: 10,
+                purchased: false
+            },
+            {
+                id: 'cp2',
+                icon: '⚡',
+                name: 'Efficacité Passive',
+                description: 'Production passive permanente +50%',
+                cost: 15,
+                purchased: false
+            },
+            {
+                id: 'cp3',
+                icon: '🔍',
+                name: 'Automation Précoce',
+                description: 'Commencer avec 1 Identifier',
+                cost: 20,
+                purchased: false
+            },
+            {
+                id: 'cp4',
+                icon: '⏰',
+                name: 'Temps Libre Accru',
+                description: 'Génération FT permanente +100%',
+                cost: 25,
+                purchased: false
+            },
+            {
+                id: 'cp5',
+                icon: '💥',
+                name: 'Maître du Combo',
+                description: 'Decay combo 6s → 9s',
+                cost: 30,
+                purchased: false
+            }
+        ];
+
+        // ===== TUTORIAL =====
+        this.tutorialComplete = false;
+
+        // ===== AUTOMATION FEEDBACK =====
+        this.identifierFeedbackAccum = 0;
+        this.sorterFeedbackAccum = 0;
+        this.macroFeedbackAccum = 0;
+
         // ===== CANVAS SETUP =====
         this.canvas = document.getElementById('terminalCanvas');
         this.ctx = this.canvas.getContext('2d');
+
+        // DOM CACHE for performance
+        this.dom = {
+            dataPoints: document.getElementById('dataPoints'),
+            dpPerSec: document.getElementById('dpPerSec'),
+            activePower: document.getElementById('activePower'),
+            conformityPoints: document.getElementById('conformityPoints'),
+            scanSpeed: document.getElementById('scanSpeed'),
+            identifierCount: document.getElementById('identifierCount'),
+            sorterCount: document.getElementById('sorterCount'),
+            macroCount: document.getElementById('macroCount'),
+            accuracy: document.getElementById('accuracy'),
+            totalRefined: document.getElementById('totalRefined'),
+            woeCount: document.getElementById('woeCount'),
+            frolicCount: document.getElementById('frolicCount'),
+            dreadCount: document.getElementById('dreadCount'),
+            maliceCount: document.getElementById('maliceCount'),
+            quotaFill: document.getElementById('quotaFill'),
+            quotaText: document.getElementById('quotaText'),
+            terminalLoad: document.getElementById('terminalLoad'),
+            severanceBtn: document.getElementById('severanceBtn'),
+            freeTime: document.getElementById('freeTime')
+        };
+
         this.resizeCanvas();
 
         this.mouseX = 0;
@@ -544,6 +667,12 @@ class LumonMDRGame {
 
     resizeCanvas() {
         const rect = this.canvas.parentElement.getBoundingClientRect();
+
+        // OPTIMIZED v5.0: Check if dimensions actually changed before resizing
+        if (this.canvas.width === rect.width && this.canvas.height === rect.height) {
+            return; // No resize needed, avoid unnecessary redraws
+        }
+
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
 
@@ -612,6 +741,9 @@ class LumonMDRGame {
         const persistentScan = this.techTree.find(t => t.id === 'tech2')?.purchased;
         const effectiveScanSpeed = this.scanSpeed * this.outieBonuses.scanSpeedMult;
 
+        // OPTIMIZED v5.0: Use squared distance to avoid Math.sqrt()
+        const radiusSq = this.scanRadius * this.scanRadius;
+
         for (const cell of this.allCells) {
             if (cell.isEmpty) continue;
 
@@ -621,12 +753,10 @@ class LumonMDRGame {
             const cellCenterX = cell.gridX * this.cellWidth + this.cellWidth / 2;
             const cellCenterY = cell.gridY * this.cellHeight + this.cellHeight / 2;
 
-            const dist = Math.sqrt(
-                (this.mouseX - cellCenterX) ** 2 +
-                (this.mouseY - cellCenterY) ** 2
-            );
+            const distSq = (this.mouseX - cellCenterX) ** 2 +
+                           (this.mouseY - cellCenterY) ** 2;
 
-            const inRadius = dist <= this.scanRadius;
+            const inRadius = distSq <= radiusSq;
 
             if (inRadius || (persistentScan && cell.state === 'scanning')) {
                 if (cell.state === 'unidentified') {
@@ -773,12 +903,21 @@ class LumonMDRGame {
                 comboBonus *= (1 + (cluster.length - 2) * 0.2);
             }
 
-            if (this.comboTimer) clearTimeout(this.comboTimer);
+            if (this.comboTimer) {
+                clearTimeout(this.comboTimer);
+                this.comboTimer = null;
+            }
             this.comboTimer = setTimeout(() => {
                 this.currentCombo = 0;
                 this.lastDropCategory = null;
+                this.comboTimer = null;
             }, this.comboDecayTime);
         } else {
+            // FIXED: Clear timer in else branch too (was memory leak)
+            if (this.comboTimer) {
+                clearTimeout(this.comboTimer);
+                this.comboTimer = null;
+            }
             this.currentCombo = 0;
             this.lastDropCategory = null;
         }
@@ -828,44 +967,67 @@ class LumonMDRGame {
     updateAutomation(deltaTime) {
         // IDENTIFIER - Auto-identify unidentified numbers
         if (this.identifierCount > 0) {
-            const scanRate = this.identifierCount * 0.5; // per second
+            const scanRate = this.identifierCount * GAME_CONSTANTS.IDENTIFIER_RATE;
             this.identifierAccum += scanRate * deltaTime;
 
+            let scannedCount = 0;
             while (this.identifierAccum >= 1) {
                 const unidentified = this.allCells.filter(c => !c.isEmpty && c.state === 'unidentified');
                 if (unidentified.length > 0) {
                     unidentified[0].state = 'identified';
                     this.identifierAccum -= 1;
+                    scannedCount++;
                 } else {
                     this.identifierAccum = 0;
                     break;
+                }
+            }
+
+            // Feedback accumulator for toasts
+            if (scannedCount > 0) {
+                this.identifierFeedbackAccum += scannedCount;
+                if (this.identifierFeedbackAccum >= 5) {
+                    this.showToast(`🔍 ${this.identifierFeedbackAccum} nombres identifiés`);
+                    this.identifierFeedbackAccum = 0;
                 }
             }
         }
 
         // SORTER - Auto-sort identified numbers
         if (this.sorterCount > 0) {
-            const sortRate = this.sorterCount * 0.33; // per second
+            const sortRate = this.sorterCount * GAME_CONSTANTS.SORTER_RATE; // INCREASED from 0.33 to 0.5
             this.sorterAccum += sortRate * deltaTime;
 
+            let sortedCount = 0;
             while (this.sorterAccum >= 1) {
                 const identified = this.allCells.filter(c => !c.isEmpty && c.state === 'identified');
                 if (identified.length > 0) {
                     const cell = identified[0];
                     this.sortCluster([cell], cell.category);
                     this.sorterAccum -= 1;
+                    sortedCount++;
                 } else {
                     this.sorterAccum = 0;
                     break;
+                }
+            }
+
+            // Feedback accumulator for toasts
+            if (sortedCount > 0) {
+                this.sorterFeedbackAccum += sortedCount;
+                if (this.sorterFeedbackAccum >= 5) {
+                    this.showToast(`📦 ${this.sorterFeedbackAccum} nombres triés`);
+                    this.sorterFeedbackAccum = 0;
                 }
             }
         }
 
         // MACRO - Auto-process everything
         if (this.macroCount > 0) {
-            const macroRate = this.macroCount * 0.8; // per second
+            const macroRate = this.macroCount * GAME_CONSTANTS.MACRO_RATE;
             this.macroAccum += macroRate * deltaTime;
 
+            let macroCount = 0;
             while (this.macroAccum >= 1) {
                 const any = this.allCells.filter(c => !c.isEmpty);
                 if (any.length > 0) {
@@ -877,9 +1039,19 @@ class LumonMDRGame {
                         this.sortCluster([cell], cell.category);
                     }
                     this.macroAccum -= 1;
+                    macroCount++;
                 } else {
                     this.macroAccum = 0;
                     break;
+                }
+            }
+
+            // Feedback accumulator for toasts
+            if (macroCount > 0) {
+                this.macroFeedbackAccum += macroCount;
+                if (this.macroFeedbackAccum >= 10) {
+                    this.showToast(`🤖 ${this.macroFeedbackAccum} nombres macro-traités`);
+                    this.macroFeedbackAccum = 0;
                 }
             }
         }
@@ -1005,6 +1177,85 @@ class LumonMDRGame {
 
         this.renderShop();
         this.showNotification(`✓ ${upgrade.name}`);
+    }
+
+    // ===== CONFORMITY POINTS SHOP v5.0 =====
+    purchaseCPUpgrade(upgrade) {
+        if (this.conformityPoints < upgrade.cost || upgrade.purchased) return;
+
+        this.conformityPoints -= upgrade.cost;
+        upgrade.purchased = true;
+
+        this.applyCPBonuses();
+        this.renderCPShop();
+        this.showNotification(`✓ ${upgrade.name} (CP)`);
+    }
+
+    applyCPBonuses() {
+        const cpUpgrades = this.cpUpgrades;
+
+        // cp1: Start with 1000 DP
+        if (cpUpgrades.find(u => u.id === 'cp1')?.purchased) {
+            this.dataPoints = Math.max(this.dataPoints, 1000);
+        }
+
+        // cp3: Start with Identifier
+        if (cpUpgrades.find(u => u.id === 'cp3')?.purchased) {
+            this.identifierCount = Math.max(this.identifierCount, 1);
+        }
+
+        // cp5: Extend combo decay time
+        if (cpUpgrades.find(u => u.id === 'cp5')?.purchased) {
+            this.comboDecayTime = 9000;
+        }
+
+        // Recalculate passive (cp2 + cp4 are multipliers)
+        this.calculatePassiveGeneration();
+    }
+
+    getCPPassiveMultiplier() {
+        // cp2: +50% passive production
+        const cp2 = this.cpUpgrades.find(u => u.id === 'cp2');
+        return (cp2 && cp2.purchased) ? 1.5 : 1;
+    }
+
+    getCPFTMultiplier() {
+        // cp4: +100% FT generation
+        const cp4 = this.cpUpgrades.find(u => u.id === 'cp4');
+        return (cp4 && cp4.purchased) ? 2.0 : 1;
+    }
+
+    renderCPShop() {
+        const cpList = document.getElementById('cpUpgradesList');
+        if (!cpList) return;
+
+        cpList.innerHTML = '';
+        this.cpUpgrades.forEach(upgrade => {
+            if (upgrade.purchased) return; // Hide purchased
+
+            const affordable = this.conformityPoints >= upgrade.cost;
+
+            const div = document.createElement('div');
+            div.className = `shop-item ${affordable ? 'affordable' : ''}`;
+            div.innerHTML = `
+                <div class="shop-item-header">
+                    <span class="shop-item-icon">${upgrade.icon}</span>
+                    <div class="shop-item-title">
+                        <h4>${upgrade.name}</h4>
+                    </div>
+                </div>
+                <p class="shop-item-desc">${upgrade.description}</p>
+                <div class="shop-item-footer">
+                    <span class="shop-item-cost">${upgrade.cost} CP</span>
+                    <button class="shop-item-btn">ACHETER</button>
+                </div>
+            `;
+
+            const btn = div.querySelector('button');
+            btn.disabled = !affordable;
+            btn.addEventListener('click', () => this.purchaseCPUpgrade(upgrade));
+            cpList.appendChild(div);
+        });
     }
 
     getUpgradeCost(item) {
@@ -1173,9 +1424,26 @@ class LumonMDRGame {
             gameContainer.style.display = 'none';
             outieWorld.classList.remove('hidden');
             this.outieNotificationShown = false;
+            this.renderOutieUI();
         } else {
             gameContainer.style.display = 'grid';
             outieWorld.classList.add('hidden');
+
+            // FIXED v5.0: Reset activity bonuses when returning to Innie
+            const housingBonus = this.housingItems
+                .filter(h => h.owned)
+                .reduce((sum, h) => sum + h.boost, 0);
+
+            this.outieBonuses = {
+                scanSpeedMult: 1,
+                powerBonus: 0,
+                comboMult: 1,
+                passiveMult: 1 + housingBonus, // Keep permanent housing bonuses
+                clusterBonus: 0
+            };
+
+            this.calculatePassiveGeneration();
+
             // Reset for next time
             this.canAccessOutie = false;
             this.lastOutieTime = this.playTimeSeconds;
@@ -1358,34 +1626,35 @@ class LumonMDRGame {
 
     // ===== UI UPDATES =====
     updateUI() {
-        document.getElementById('dataPoints').textContent = this.formatNumber(Math.floor(this.dataPoints));
-        document.getElementById('dpPerSec').textContent = this.formatNumber(this.passiveGeneration, 1) + '/sec';
-        document.getElementById('activePower').textContent = (this.activePower + this.outieBonuses.powerBonus) + '/refine';
-        document.getElementById('conformityPoints').textContent = this.conformityPoints;
+        // OPTIMIZED v5.0: Use cached DOM elements (no getElementById each frame!)
+        this.dom.dataPoints.textContent = this.formatNumber(Math.floor(this.dataPoints));
+        this.dom.dpPerSec.textContent = this.formatNumber(this.passiveGeneration, 1) + '/sec';
+        this.dom.activePower.textContent = (this.activePower + this.outieBonuses.powerBonus) + '/refine';
+        this.dom.conformityPoints.textContent = this.conformityPoints;
 
-        document.getElementById('scanSpeed').textContent = ((this.scanSpeed * this.outieBonuses.scanSpeedMult) / 1000).toFixed(1) + 's';
-        document.getElementById('identifierCount').textContent = this.identifierCount;
-        document.getElementById('sorterCount').textContent = this.sorterCount;
-        document.getElementById('macroCount').textContent = this.macroCount;
+        this.dom.scanSpeed.textContent = ((this.scanSpeed * this.outieBonuses.scanSpeedMult) / 1000).toFixed(1) + 's';
+        this.dom.identifierCount.textContent = this.identifierCount;
+        this.dom.sorterCount.textContent = this.sorterCount;
+        this.dom.macroCount.textContent = this.macroCount;
 
         const accuracy = this.totalRefined > 0 ? (this.correctSorts / this.totalRefined * 100) : 100;
-        document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
-        document.getElementById('totalRefined').textContent = this.formatNumber(this.totalRefined);
+        this.dom.accuracy.textContent = accuracy.toFixed(1) + '%';
+        this.dom.totalRefined.textContent = this.formatNumber(this.totalRefined);
 
-        document.getElementById('woeCount').textContent = this.categoryStats.woe;
-        document.getElementById('frolicCount').textContent = this.categoryStats.frolic;
-        document.getElementById('dreadCount').textContent = this.categoryStats.dread;
-        document.getElementById('maliceCount').textContent = this.categoryStats.malice;
+        this.dom.woeCount.textContent = this.categoryStats.woe;
+        this.dom.frolicCount.textContent = this.categoryStats.frolic;
+        this.dom.dreadCount.textContent = this.categoryStats.dread;
+        this.dom.maliceCount.textContent = this.categoryStats.malice;
 
         const quotaPercent = Math.min(100, (this.quotaProgress / this.currentQuota) * 100);
-        document.getElementById('quotaFill').style.width = quotaPercent + '%';
-        document.getElementById('quotaText').textContent = `${this.formatNumber(this.quotaProgress)} / ${this.formatNumber(this.currentQuota)}`;
+        this.dom.quotaFill.style.width = quotaPercent + '%';
+        this.dom.quotaText.textContent = `${this.formatNumber(this.quotaProgress)} / ${this.formatNumber(this.currentQuota)}`;
 
         const filled = this.allCells.filter(c => !c.isEmpty).length;
-        document.getElementById('terminalLoad').textContent = `Load: ${filled}/${this.allCells.length}`;
+        this.dom.terminalLoad.textContent = `Load: ${filled}/${this.allCells.length}`;
 
-        document.getElementById('severanceBtn').disabled = this.dataPoints < 100000;
-        document.getElementById('freeTime').textContent = this.formatNumber(this.freeTime, 1);
+        this.dom.severanceBtn.disabled = this.dataPoints < GAME_CONSTANTS.SEVERANCE_THRESHOLD;
+        this.dom.freeTime.textContent = this.formatNumber(this.freeTime, 1);
 
         // Update shop button states continuously
         this.updateShopButtons();
